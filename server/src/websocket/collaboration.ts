@@ -18,6 +18,65 @@ const awareness = new Map<string, awarenessProtocol.Awareness>();
 // Track users in each document
 const documentUsers = new Map<string, Set<string>>();
 
+// Track cleanup timeouts for documents
+const cleanupTimeouts = new Map<string, NodeJS.Timeout>();
+
+// Cleanup delay in milliseconds (5 minutes)
+const DOCUMENT_CLEANUP_DELAY_MS = 5 * 60 * 1000;
+
+/**
+ * Schedule document cleanup after all users have left
+ * Documents are kept in memory for a grace period to allow reconnections
+ */
+function scheduleDocumentCleanup(noteId: string): void {
+    // Clear any existing timeout
+    const existingTimeout = cleanupTimeouts.get(noteId);
+    if (existingTimeout) {
+        clearTimeout(existingTimeout);
+    }
+
+    // Schedule cleanup
+    const timeout = setTimeout(async () => {
+        const users = documentUsers.get(noteId);
+        // Only cleanup if no users are connected
+        if (!users || users.size === 0) {
+            // Save document before cleanup
+            await saveDocument(noteId);
+
+            // Clean up document
+            const doc = documents.get(noteId);
+            if (doc) {
+                doc.destroy();
+                documents.delete(noteId);
+            }
+
+            // Clean up awareness
+            const awarenesInstance = awareness.get(noteId);
+            if (awarenesInstance) {
+                awarenesInstance.destroy();
+                awareness.delete(noteId);
+            }
+
+            // Clean up user tracking
+            documentUsers.delete(noteId);
+            cleanupTimeouts.delete(noteId);
+        }
+    }, DOCUMENT_CLEANUP_DELAY_MS);
+
+    cleanupTimeouts.set(noteId, timeout);
+}
+
+/**
+ * Cancel scheduled cleanup (when a user joins)
+ */
+function cancelDocumentCleanup(noteId: string): void {
+    const timeout = cleanupTimeouts.get(noteId);
+    if (timeout) {
+        clearTimeout(timeout);
+        cleanupTimeouts.delete(noteId);
+    }
+}
+
 // Message types
 const messageSync = 0;
 const messageAwareness = 1;
@@ -125,6 +184,9 @@ export function setupCollaborationHandlers(io: Server, socket: AuthenticatedSock
             // Join the room
             socket.join(`doc:${noteId}`);
 
+            // Cancel any pending cleanup for this document
+            cancelDocumentCleanup(noteId);
+
             // Track user in document
             if (!documentUsers.has(noteId)) {
                 documentUsers.set(noteId, new Set());
@@ -171,8 +233,8 @@ export function setupCollaborationHandlers(io: Server, socket: AuthenticatedSock
         if (users) {
             users.delete(userId);
             if (users.size === 0) {
-                documentUsers.delete(noteId);
-                // Optionally clean up document after delay
+                // Schedule cleanup after grace period
+                scheduleDocumentCleanup(noteId);
             }
         }
 
@@ -264,6 +326,11 @@ export function setupCollaborationHandlers(io: Server, socket: AuthenticatedSock
                     userId,
                     userCount: users.size,
                 });
+
+                // Schedule cleanup if no users left
+                if (users.size === 0) {
+                    scheduleDocumentCleanup(noteId);
+                }
             }
         });
     });

@@ -398,7 +398,7 @@ export default function NotesPage() {
             <div className="flex-1 flex overflow-hidden">
                 {/* Note List Sidebar - Hidden in distraction-free mode */}
                 {!distractionFreeMode && (
-                <div className="w-80 flex-shrink-0 flex flex-col border-r">
+                <div className="w-full md:w-80 md:flex-shrink-0 flex flex-col border-r">
                     {/* Folder Tree Toggle */}
                     <div className="p-2 border-b flex items-center justify-between">
                         <Button
@@ -500,9 +500,9 @@ export default function NotesPage() {
                     />
                 </div>
 
-                {/* Right Sidebar - Attachments - Hidden in distraction-free mode */}
+                {/* Right Sidebar - Attachments - Hidden in distraction-free mode and on mobile */}
                 {!distractionFreeMode && (
-                <div className="w-80 flex-shrink-0 overflow-y-auto p-4 bg-muted/30">
+                <div className="hidden lg:block w-80 flex-shrink-0 overflow-y-auto p-4 bg-muted/30">
                     <StorageQuotaDisplay />
                     {selectedNote && (
                         <NoteAttachments
@@ -516,8 +516,8 @@ export default function NotesPage() {
 
             {/* Version History Modal */}
             {showVersionHistory && selectedNote && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-background rounded-lg shadow-lg w-[90vw] h-[80vh] max-w-6xl">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-background rounded-lg shadow-lg w-full h-full sm:w-[90vw] sm:h-[80vh] max-w-6xl overflow-hidden">
                         <VersionHistory
                             noteId={selectedNote.id}
                             onRestore={handleRestoreVersion}
@@ -545,8 +545,8 @@ export default function NotesPage() {
 
             {/* Graph View Modal */}
             {showGraphView && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-background rounded-lg shadow-lg w-[90vw] h-[80vh] max-w-6xl flex flex-col">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-background rounded-lg shadow-lg w-full h-full sm:w-[90vw] sm:h-[80vh] max-w-6xl flex flex-col overflow-hidden">
                         <GraphView
                             notes={notes}
                             onSelectNote={(noteId) => {
@@ -562,8 +562,8 @@ export default function NotesPage() {
 
             {/* Advanced Search Panel */}
             {showAdvancedSearch && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-background rounded-lg shadow-lg w-[90vw] max-w-2xl max-h-[80vh] overflow-y-auto">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-background rounded-lg shadow-lg w-full sm:w-[90vw] max-w-2xl max-h-full sm:max-h-[80vh] overflow-y-auto">
                         <AdvancedSearchPanel
                             notes={notes}
                             allTags={allTags}

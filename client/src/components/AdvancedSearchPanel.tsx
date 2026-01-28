@@ -173,7 +173,7 @@ export function AdvancedSearchPanel({
                         </Button>
                     )}
                     {onClose && (
-                        <Button variant="ghost" size="icon" onClick={onClose}>
+                        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close search panel">
                             <X className="h-4 w-4" />
                         </Button>
                     )}
@@ -354,6 +354,7 @@ export function AdvancedSearchPanel({
                                     size="icon"
                                     className="h-6 w-6"
                                     onClick={() => deleteSearch(search.id)}
+                                    aria-label={`Delete saved search: ${search.name}`}
                                 >
                                     <Trash2 className="h-3 w-3" />
                                 </Button>

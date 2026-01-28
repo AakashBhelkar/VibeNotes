@@ -239,14 +239,27 @@ function downloadFile(content: string, filename: string, mimeType: string): void
     link.download = filename;
     link.style.display = 'none';
 
+    // Cleanup function to remove link and revoke URL
+    const cleanup = () => {
+        if (link.parentNode) {
+            document.body.removeChild(link);
+        }
+        URL.revokeObjectURL(url);
+    };
+
+    // Handle click completion
+    link.onclick = () => {
+        // Use requestAnimationFrame to ensure click completes before cleanup
+        requestAnimationFrame(() => {
+            requestAnimationFrame(cleanup);
+        });
+    };
+
     document.body.appendChild(link);
     link.click();
 
-    // Cleanup
-    setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, 100);
+    // Fallback cleanup in case onclick doesn't fire (e.g., programmatic click issues)
+    setTimeout(cleanup, 1000);
 }
 
 /**

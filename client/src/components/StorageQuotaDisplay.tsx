@@ -35,10 +35,50 @@ export function StorageQuotaDisplay() {
     };
 
     if (loading) {
-        return null;
+        return (
+            <Card className="mb-4">
+                <CardContent className="pt-6">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <HardDrive className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">Storage Usage</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded animate-pulse" />
+                        <p className="text-xs text-muted-foreground">Loading...</p>
+                    </div>
+                </CardContent>
+            </Card>
+        );
     }
 
-    if (error || !usage) {
+    if (error) {
+        return (
+            <Card className="mb-4">
+                <CardContent className="pt-6">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <HardDrive className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">Storage Usage</span>
+                        </div>
+                        <div className="flex items-start gap-2 p-2 bg-destructive/10 rounded text-destructive text-xs">
+                            <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p>Failed to load storage information.</p>
+                                <button
+                                    onClick={loadStorageUsage}
+                                    className="underline hover:no-underline mt-1"
+                                >
+                                    Try again
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (!usage) {
         return null;
     }
 

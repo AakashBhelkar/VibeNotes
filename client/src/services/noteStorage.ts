@@ -1,6 +1,43 @@
 import { db, Note, SyncQueueItem } from '@/lib/db';
 
 /**
+ * Conflict resolution result
+ */
+export interface ConflictResult {
+    noteId: string;
+    localVersion: number;
+    serverVersion: number;
+    resolution: 'server_wins' | 'local_wins' | 'merged';
+}
+
+/**
+ * Conflict listeners
+ */
+type ConflictListener = (conflict: ConflictResult) => void;
+const conflictListeners: Set<ConflictListener> = new Set();
+
+/**
+ * Subscribe to conflict notifications
+ */
+export function onConflict(listener: ConflictListener): () => void {
+    conflictListeners.add(listener);
+    return () => conflictListeners.delete(listener);
+}
+
+/**
+ * Notify all listeners of a conflict
+ */
+function notifyConflict(conflict: ConflictResult): void {
+    conflictListeners.forEach(listener => {
+        try {
+            listener(conflict);
+        } catch (error) {
+            console.error('Error in conflict listener:', error);
+        }
+    });
+}
+
+/**
  * Local storage service for notes
  * Implements offline-first architecture
  */
@@ -165,21 +202,48 @@ export const noteStorage = {
 
     /**
      * Sync notes from server
+     * Notifies listeners when conflicts are detected and resolved
      */
-    async syncFromServer(serverNotes: Note[]): Promise<void> {
+    async syncFromServer(serverNotes: Note[]): Promise<ConflictResult[]> {
+        const conflicts: ConflictResult[] = [];
+
         await db.transaction('rw', db.notes, async () => {
             for (const serverNote of serverNotes) {
                 const localNote = await db.notes.get(serverNote.id);
 
-                // Only update if server version is newer
-                if (!localNote || serverNote.version > localNote.version) {
+                if (!localNote) {
+                    // New note from server - no conflict
+                    await db.notes.put({
+                        ...serverNote,
+                        syncedAt: new Date(),
+                    });
+                } else if (serverNote.version > localNote.version) {
+                    // Server has newer version
+                    const hasLocalChanges = !localNote.syncedAt ||
+                        localNote.updatedAt > localNote.syncedAt;
+
+                    if (hasLocalChanges) {
+                        // Conflict detected - server wins but we notify
+                        const conflict: ConflictResult = {
+                            noteId: serverNote.id,
+                            localVersion: localNote.version,
+                            serverVersion: serverNote.version,
+                            resolution: 'server_wins',
+                        };
+                        conflicts.push(conflict);
+                        notifyConflict(conflict);
+                    }
+
                     await db.notes.put({
                         ...serverNote,
                         syncedAt: new Date(),
                     });
                 }
+                // If local version is equal or greater, keep local (will be synced up)
             }
         });
+
+        return conflicts;
     },
 
     /**

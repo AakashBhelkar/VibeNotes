@@ -72,20 +72,20 @@ export function KeyboardShortcutsPanel({ isOpen, onClose }: KeyboardShortcutsPan
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-background rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <div className="bg-background rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[80vh] sm:max-h-[85vh] overflow-hidden flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b">
                     <div className="flex items-center gap-2">
                         <Keyboard className="h-5 w-5" />
                         <h2 className="text-lg font-semibold">Keyboard Shortcuts</h2>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose}>
+                    <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close keyboard shortcuts panel">
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
 
                 {/* Content */}
-                <div className="p-4 overflow-y-auto max-h-[calc(80vh-80px)]">
+                <div className="p-4 overflow-y-auto flex-1 min-h-0">
                     <div className="grid gap-6">
                         {SHORTCUT_GROUPS.map((group) => (
                             <div key={group.title}>

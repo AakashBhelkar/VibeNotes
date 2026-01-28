@@ -133,6 +133,8 @@ export function ColorLabelManager({ onError }: ColorLabelManagerProps) {
                                                                 : 'border-transparent'
                                                         )}
                                                         style={{ backgroundColor: color }}
+                                                        aria-label={`Select color ${color}`}
+                                                        aria-pressed={editingLabel.color === color}
                                                     />
                                                 ))}
                                             </div>
@@ -156,6 +158,7 @@ export function ColorLabelManager({ onError }: ColorLabelManagerProps) {
                                                 variant="ghost"
                                                 className="h-8 w-8"
                                                 onClick={handleUpdateLabel}
+                                                aria-label="Save label changes"
                                             >
                                                 <Check className="h-4 w-4" />
                                             </Button>
@@ -164,6 +167,7 @@ export function ColorLabelManager({ onError }: ColorLabelManagerProps) {
                                                 variant="ghost"
                                                 className="h-8 w-8"
                                                 onClick={() => setEditingLabel(null)}
+                                                aria-label="Cancel editing"
                                             >
                                                 <X className="h-4 w-4" />
                                             </Button>
@@ -181,6 +185,7 @@ export function ColorLabelManager({ onError }: ColorLabelManagerProps) {
                                                 variant="ghost"
                                                 className="h-8 w-8"
                                                 onClick={() => setEditingLabel({ ...label })}
+                                                aria-label={`Edit label: ${label.name}`}
                                             >
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
@@ -189,6 +194,7 @@ export function ColorLabelManager({ onError }: ColorLabelManagerProps) {
                                                 variant="ghost"
                                                 className="h-8 w-8 text-destructive hover:text-destructive"
                                                 onClick={() => setDeleteConfirmLabel(label)}
+                                                aria-label={`Delete label: ${label.name}`}
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -226,6 +232,8 @@ export function ColorLabelManager({ onError }: ColorLabelManagerProps) {
                                                     : 'border-transparent'
                                             )}
                                             style={{ backgroundColor: color }}
+                                            aria-label={`Select color ${color}`}
+                                            aria-pressed={newLabelColor === color}
                                         />
                                     ))}
                                 </div>

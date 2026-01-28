@@ -168,6 +168,21 @@ export function GraphView({ notes, onSelectNote, onClose }: GraphViewProps) {
         return () => cancelAnimationFrame(animationId);
     }, [links, dimensions]);
 
+    // Get theme-aware colors from CSS variables
+    const getThemeColors = () => {
+        const computedStyle = getComputedStyle(document.documentElement);
+        const isDark = document.documentElement.classList.contains('dark');
+
+        return {
+            linkColor: isDark ? 'rgba(156, 163, 175, 0.3)' : 'rgba(107, 114, 128, 0.3)',
+            nodeColor: computedStyle.getPropertyValue('--primary').trim() || (isDark ? '#818CF8' : '#6366F1'),
+            nodeHoverColor: computedStyle.getPropertyValue('--primary').trim() || '#3B82F6',
+            labelColor: isDark ? '#D1D5DB' : '#6B7280',
+            labelHoverColor: isDark ? '#F9FAFB' : '#1F2937',
+            strokeColor: isDark ? '#F9FAFB' : '#FFFFFF',
+        };
+    };
+
     const render = () => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
@@ -175,6 +190,7 @@ export function GraphView({ notes, onSelectNote, onClose }: GraphViewProps) {
 
         const currentNodes = nodesRef.current;
         const nodeMap = new Map(currentNodes.map((n) => [n.id, n]));
+        const colors = getThemeColors();
 
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -185,7 +201,7 @@ export function GraphView({ notes, onSelectNote, onClose }: GraphViewProps) {
         ctx.scale(zoom, zoom);
 
         // Draw links
-        ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
+        ctx.strokeStyle = colors.linkColor;
         ctx.lineWidth = 1 / zoom;
         for (const link of links) {
             const source = nodeMap.get(link.source);
@@ -205,18 +221,18 @@ export function GraphView({ notes, onSelectNote, onClose }: GraphViewProps) {
             // Node circle
             ctx.beginPath();
             ctx.arc(node.x || 0, node.y || 0, node.size, 0, Math.PI * 2);
-            ctx.fillStyle = isHovered ? '#3B82F6' : '#6366F1';
+            ctx.fillStyle = isHovered ? colors.nodeHoverColor : colors.nodeColor;
             ctx.fill();
 
             if (isHovered) {
-                ctx.strokeStyle = '#fff';
+                ctx.strokeStyle = colors.strokeColor;
                 ctx.lineWidth = 2 / zoom;
                 ctx.stroke();
             }
 
             // Node label
             if (zoom > 0.5) {
-                ctx.fillStyle = isHovered ? '#fff' : '#888';
+                ctx.fillStyle = isHovered ? colors.labelHoverColor : colors.labelColor;
                 ctx.font = `${12 / zoom}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.fillText(
@@ -291,10 +307,10 @@ export function GraphView({ notes, onSelectNote, onClose }: GraphViewProps) {
             <div className="flex items-center justify-between p-4 border-b">
                 <h2 className="text-lg font-semibold">Graph View</h2>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => setZoom(zoom * 1.2)}>
+                    <Button variant="outline" size="icon" onClick={() => setZoom(zoom * 1.2)} aria-label="Zoom in">
                         <ZoomIn className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => setZoom(zoom * 0.8)}>
+                    <Button variant="outline" size="icon" onClick={() => setZoom(zoom * 0.8)} aria-label="Zoom out">
                         <ZoomOut className="h-4 w-4" />
                     </Button>
                     <Button
@@ -304,10 +320,11 @@ export function GraphView({ notes, onSelectNote, onClose }: GraphViewProps) {
                             setZoom(1);
                             setOffset({ x: 0, y: 0 });
                         }}
+                        aria-label="Reset view"
                     >
                         <Maximize2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={onClose}>
+                    <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close graph view">
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
@@ -325,6 +342,8 @@ export function GraphView({ notes, onSelectNote, onClose }: GraphViewProps) {
                     onMouseLeave={handleMouseUp}
                     onWheel={handleWheel}
                     style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                    aria-label={`Graph visualization with ${nodes.length} notes and ${links.length} connections. Click nodes to select notes, drag to pan, scroll to zoom.`}
+                    role="img"
                 />
             </div>
 

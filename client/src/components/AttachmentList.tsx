@@ -88,6 +88,7 @@ export function AttachmentList({ attachments, onDelete }: AttachmentListProps) {
                                             size="icon"
                                             onClick={() => window.open(attachment.url, '_blank')}
                                             title="Open in new tab"
+                                            aria-label={`Open ${attachment.fileName} in new tab`}
                                         >
                                             <ExternalLink className="h-4 w-4" />
                                         </Button>
@@ -96,6 +97,7 @@ export function AttachmentList({ attachments, onDelete }: AttachmentListProps) {
                                             size="icon"
                                             onClick={() => handleDownload(attachment)}
                                             title="Download"
+                                            aria-label={`Download ${attachment.fileName}`}
                                         >
                                             <Download className="h-4 w-4" />
                                         </Button>
@@ -104,6 +106,7 @@ export function AttachmentList({ attachments, onDelete }: AttachmentListProps) {
                                             size="icon"
                                             onClick={() => handleDeleteClick(attachment.id)}
                                             title="Delete"
+                                            aria-label={`Delete ${attachment.fileName}`}
                                         >
                                             <Trash2 className="h-4 w-4 text-destructive" />
                                         </Button>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Note } from '@/lib/db';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Save, Eye, Edit2, Copy, Check } from 'lucide-react';
+import { Save, Eye, Edit2, Copy, Check, Circle } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { TagInput } from './TagInput';
 import ReactMarkdown from 'react-markdown';
@@ -42,6 +42,12 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
     const tagsRef = useRef(tags);
     const noteRef = useRef(note);
 
+    // Refs for save coordination to prevent race conditions
+    const saveAbortControllerRef = useRef<AbortController | null>(null);
+    const isSavingRef = useRef(false);
+    const pendingSaveRef = useRef(false);
+    const [hasPendingChanges, setHasPendingChanges] = useState(false);
+
     // Update refs when state changes
     useEffect(() => {
         contentRef.current = content;
@@ -50,6 +56,19 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
         noteRef.current = note;
     }, [content, title, tags, note]);
 
+    // Track pending changes
+    useEffect(() => {
+        if (note) {
+            const hasChanges =
+                title !== note.title ||
+                content !== note.content ||
+                JSON.stringify(tags) !== JSON.stringify(note.tags);
+            setHasPendingChanges(hasChanges);
+        } else {
+            setHasPendingChanges(false);
+        }
+    }, [title, content, tags, note]);
+
     // Debounce content changes for auto-save
     const debouncedContent = useDebounce(content, EDITOR_CONFIG.AUTO_SAVE_DELAY_MS);
     const debouncedTitle = useDebounce(title, EDITOR_CONFIG.AUTO_SAVE_DELAY_MS);
@@ -57,11 +76,21 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
 
     // Load note data when note changes
     useEffect(() => {
+        // Cancel any in-flight save when switching notes
+        if (saveAbortControllerRef.current) {
+            saveAbortControllerRef.current.abort();
+            saveAbortControllerRef.current = null;
+        }
+        isSavingRef.current = false;
+        pendingSaveRef.current = false;
+
         if (note) {
             setTitle(note.title);
             setContent(note.content);
             setTags(note.tags || []);
             setShowSlashMenu(false);
+            setLastSaved(null);
+            setHasPendingChanges(false);
         } else {
             setTitle('');
             setContent('');
@@ -73,19 +102,55 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
         const currentNote = noteRef.current;
         if (!currentNote) return;
 
+        // If already saving, mark that we have a pending save
+        if (isSavingRef.current) {
+            pendingSaveRef.current = true;
+            return;
+        }
+
+        // Create abort controller for this save operation
+        const abortController = new AbortController();
+        saveAbortControllerRef.current = abortController;
+        isSavingRef.current = true;
+
         setIsSaving(true);
         try {
-            await onSave(currentNote.id, {
+            // Capture values at save time to ensure consistency
+            const saveData = {
                 title: titleRef.current,
                 content: contentRef.current,
                 tags: tagsRef.current
-            });
-            setLastSaved(new Date());
+            };
+
+            // Check if aborted before starting
+            if (abortController.signal.aborted) {
+                return;
+            }
+
+            await onSave(currentNote.id, saveData);
+
+            // Check if aborted after save completed
+            if (!abortController.signal.aborted) {
+                setLastSaved(new Date());
+                setHasPendingChanges(false);
+            }
         } catch (error) {
+            // Don't report error if save was aborted
+            if (abortController.signal.aborted) {
+                return;
+            }
             const errorMessage = error instanceof Error ? error.message : 'Failed to save note';
             onError?.(errorMessage);
         } finally {
+            isSavingRef.current = false;
             setIsSaving(false);
+
+            // If there was a pending save request, execute it now
+            if (pendingSaveRef.current && !abortController.signal.aborted) {
+                pendingSaveRef.current = false;
+                // Use setTimeout to avoid stack overflow with rapid changes
+                setTimeout(() => handleSave(), 0);
+            }
         }
     }, [onSave, onError]);
 
@@ -105,8 +170,8 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
             await navigator.clipboard.writeText(content);
             setIsCopied(true);
             setTimeout(() => setIsCopied(false), 2000);
-        } catch {
-            // Clipboard write failed silently
+        } catch (error) {
+            onError?.('Failed to copy to clipboard. Please try again or use Ctrl+C.');
         }
     };
 
@@ -285,7 +350,9 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
                         setIsCopied(true);
                         setTimeout(() => setIsCopied(false), 2000);
                     })
-                    .catch(() => { /* Clipboard write failed silently */ });
+                    .catch(() => {
+                        onError?.('Failed to copy to clipboard. Please try again or use Ctrl+C.');
+                    });
             }
         };
 
@@ -335,8 +402,17 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
                                     Saving...
                                 </span>
                             )}
-                            {!isSaving && lastSaved && (
-                                <span>Saved {lastSaved.toLocaleTimeString()}</span>
+                            {!isSaving && hasPendingChanges && (
+                                <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                                    <Circle className="h-2 w-2 fill-current" />
+                                    Unsaved changes
+                                </span>
+                            )}
+                            {!isSaving && !hasPendingChanges && lastSaved && (
+                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                    <Check className="h-3 w-3" />
+                                    Saved {lastSaved.toLocaleTimeString()}
+                                </span>
                             )}
                         </div>
 

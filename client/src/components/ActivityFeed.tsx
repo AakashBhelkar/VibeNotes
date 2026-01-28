@@ -65,18 +65,18 @@ function getActivityIcon(type: ActivityTypeEnum) {
 }
 
 /**
- * Get color for activity type
+ * Get color for activity type (using semantic CSS classes for theme support)
  */
 function getActivityColor(type: ActivityTypeEnum): string {
     switch (type) {
         case 'note_created':
-            return 'text-green-500';
+            return 'text-emerald-600 dark:text-emerald-400';
         case 'note_deleted':
-            return 'text-red-500';
+            return 'text-destructive';
         case 'note_archived':
-            return 'text-amber-500';
+            return 'text-amber-600 dark:text-amber-400';
         case 'note_pinned':
-            return 'text-blue-500';
+            return 'text-primary';
         default:
             return 'text-muted-foreground';
     }
@@ -167,7 +167,7 @@ export function ActivityFeed({ onClose, onSelectNote }: ActivityFeedProps) {
                     <Activity className="h-5 w-5" />
                     <h2 className="text-lg font-semibold">Activity Feed</h2>
                 </div>
-                <Button variant="ghost" size="icon" onClick={onClose}>
+                <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close activity feed">
                     <X className="h-4 w-4" />
                 </Button>
             </div>
@@ -180,15 +180,15 @@ export function ActivityFeed({ onClose, onSelectNote }: ActivityFeedProps) {
                         <div className="text-xs text-muted-foreground">Total</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-green-500">{stats.notesCreated}</div>
+                        <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.notesCreated}</div>
                         <div className="text-xs text-muted-foreground">Created</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-500">{stats.notesUpdated}</div>
+                        <div className="text-2xl font-bold text-primary">{stats.notesUpdated}</div>
                         <div className="text-xs text-muted-foreground">Updated</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-red-500">{stats.notesDeleted}</div>
+                        <div className="text-2xl font-bold text-destructive">{stats.notesDeleted}</div>
                         <div className="text-xs text-muted-foreground">Deleted</div>
                     </div>
                 </div>

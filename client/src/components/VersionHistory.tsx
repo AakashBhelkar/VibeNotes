@@ -3,7 +3,7 @@ import { NoteVersion } from '@/lib/db';
 import { versionService } from '@/services/versionService';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
-import { Clock, RotateCcw } from 'lucide-react';
+import { Clock, RotateCcw, AlertTriangle, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface VersionHistoryProps {
@@ -16,6 +16,7 @@ export function VersionHistory({ noteId, onRestore, onClose }: VersionHistoryPro
     const [versions, setVersions] = useState<NoteVersion[]>([]);
     const [selectedVersion, setSelectedVersion] = useState<NoteVersion | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadVersions();
@@ -23,11 +24,13 @@ export function VersionHistory({ noteId, onRestore, onClose }: VersionHistoryPro
 
     const loadVersions = async () => {
         setLoading(true);
+        setError(null);
         try {
             const versionList = await versionService.getVersions(noteId);
             setVersions(versionList);
-        } catch {
-            // Error handled silently - versions will remain empty
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to load version history';
+            setError(message);
         } finally {
             setLoading(false);
         }
@@ -43,7 +46,24 @@ export function VersionHistory({ noteId, onRestore, onClose }: VersionHistoryPro
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <p className="text-muted-foreground">Loading versions...</p>
+                <div className="text-center">
+                    <RefreshCw className="h-8 w-8 text-muted-foreground mx-auto mb-2 animate-spin" />
+                    <p className="text-muted-foreground">Loading versions...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                <AlertTriangle className="h-12 w-12 text-destructive" />
+                <p className="text-destructive font-medium">Failed to load version history</p>
+                <p className="text-sm text-muted-foreground">{error}</p>
+                <Button onClick={loadVersions} variant="outline" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Try Again
+                </Button>
             </div>
         );
     }

@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { AttachmentService } from '../services/AttachmentService';
 import { AttachmentRepository } from '../repositories/AttachmentRepository';
 import { StorageService } from '../services/StorageService';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/db';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { attachmentUploadSchema, attachmentDeleteSchema } from '../utils/attachmentValidationSchemas';
 import { ValidationError } from '../utils/AppError';
@@ -10,7 +10,6 @@ import { STORAGE_CONFIG } from '../config/constants';
 import multer from 'multer';
 
 const router = Router();
-const prisma = new PrismaClient();
 const attachmentRepository = new AttachmentRepository(prisma);
 const storageService = new StorageService();
 const attachmentService = new AttachmentService(attachmentRepository, storageService);

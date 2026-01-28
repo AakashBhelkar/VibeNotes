@@ -231,7 +231,7 @@ export function CommentThread({ noteId, onClose }: CommentThreadProps) {
                         ({comments.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0)})
                     </span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={onClose}>
+                <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close comments panel">
                     <X className="h-4 w-4" />
                 </Button>
             </div>
@@ -289,6 +289,7 @@ export function CommentThread({ noteId, onClose }: CommentThreadProps) {
                             onClick={handleEdit}
                             disabled={!editContent.trim() || isSubmitting}
                             size="icon"
+                            aria-label="Save comment edit"
                         >
                             <Check className="h-4 w-4" />
                         </Button>
@@ -326,6 +327,7 @@ export function CommentThread({ noteId, onClose }: CommentThreadProps) {
                             onClick={handleSubmit}
                             disabled={!newComment.trim() || isSubmitting}
                             size="icon"
+                            aria-label={replyingTo ? 'Send reply' : 'Send comment'}
                         >
                             <Send className="h-4 w-4" />
                         </Button>
