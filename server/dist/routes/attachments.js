@@ -7,15 +7,14 @@ const express_1 = require("express");
 const AttachmentService_1 = require("../services/AttachmentService");
 const AttachmentRepository_1 = require("../repositories/AttachmentRepository");
 const StorageService_1 = require("../services/StorageService");
-const client_1 = require("@prisma/client");
+const db_1 = __importDefault(require("../config/db"));
 const auth_1 = require("../middleware/auth");
 const attachmentValidationSchemas_1 = require("../utils/attachmentValidationSchemas");
 const AppError_1 = require("../utils/AppError");
 const constants_1 = require("../config/constants");
 const multer_1 = __importDefault(require("multer"));
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
-const attachmentRepository = new AttachmentRepository_1.AttachmentRepository(prisma);
+const attachmentRepository = new AttachmentRepository_1.AttachmentRepository(db_1.default);
 const storageService = new StorageService_1.StorageService();
 const attachmentService = new AttachmentService_1.AttachmentService(attachmentRepository, storageService);
 // Configure multer for file uploads (memory storage)

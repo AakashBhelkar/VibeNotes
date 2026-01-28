@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" width="160" height="40">
+  <defs>
+    <linearGradient id="logo-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="logo-text" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon -->
+  <g transform="translate(4, 4)">
+    <!-- Background rounded square -->
+    <rect x="0" y="0" width="32" height="32" rx="6" fill="url(#logo-bg)"/>
+    <!-- Note page -->
+    <path d="M6 5h14a2 2 0 012 2v18a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z" fill="white" fill-opacity="0.95"/>
+    <!-- Folded corner -->
+    <path d="M16 5v5a2 2 0 002 2h5l-7-7z" fill="#e0e7ff"/>
+    <!-- Text lines -->
+    <line x1="7" y1="15" x2="17" y2="15" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="7" y1="18.5" x2="15" y2="18.5" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="7" y1="22" x2="12" y2="22" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Text: VibeNotes -->
+  <text x="44" y="28" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="url(#logo-text)">
+    VibeNotes
+  </text>
+</svg>

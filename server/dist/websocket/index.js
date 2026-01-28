@@ -42,12 +42,16 @@ function initializeWebSocket(httpServer) {
     });
     // Connection handler
     io.on('connection', (socket) => {
-        console.log(`User connected: ${socket.userId}`);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`User connected: ${socket.userId}`);
+        }
         // Setup collaboration handlers
         (0, collaboration_1.setupCollaborationHandlers)(io, socket);
         // Handle disconnect
         socket.on('disconnect', () => {
-            console.log(`User disconnected: ${socket.userId}`);
+            if (process.env.NODE_ENV !== 'production') {
+                console.log(`User disconnected: ${socket.userId}`);
+            }
         });
     });
     return io;

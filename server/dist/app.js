@@ -9,6 +9,8 @@ const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const path_1 = __importDefault(require("path"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
+const yamljs_1 = __importDefault(require("yamljs"));
 const AuthRoutes_1 = __importDefault(require("./routes/AuthRoutes"));
 const NoteRoutes_1 = __importDefault(require("./routes/NoteRoutes"));
 const attachments_1 = __importDefault(require("./routes/attachments"));
@@ -49,6 +51,12 @@ app.use((0, morgan_1.default)('dev'));
 app.use(generalLimiter);
 // Serve uploaded files statically
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
+// API Documentation (Swagger UI)
+const swaggerDocument = yamljs_1.default.load(path_1.default.join(__dirname, 'openapi.yaml'));
+app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerDocument, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'VibeNotes API Documentation',
+}));
 // Apply stricter rate limiting to auth routes
 app.use('/auth', authLimiter, AuthRoutes_1.default);
 app.use('/notes', NoteRoutes_1.default);
