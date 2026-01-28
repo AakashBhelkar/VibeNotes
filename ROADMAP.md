@@ -2,7 +2,7 @@
 
 This document outlines the planned features and improvements for VibeNotes.
 
-## Current Version: 1.3.1
+## Current Version: 1.7.0
 
 VibeNotes is an offline-first collaborative note-taking application with:
 - Full offline support with automatic sync
@@ -31,53 +31,61 @@ VibeNotes is an offline-first collaborative note-taking application with:
 
 ---
 
-## Upcoming Features
-
-### v1.4 - Developer Experience
+## v1.4 - Developer Experience (January 2026)
 *Focus: Infrastructure and code quality*
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Code Formatting | Planned | Prettier integration for consistent code style |
-| Pre-commit Hooks | Planned | Husky + lint-staged for quality gates |
-| CI/CD Pipeline | Planned | GitHub Actions for automated testing |
-| API Documentation | Planned | OpenAPI/Swagger specification |
-| Contributing Guide | Planned | Developer onboarding documentation |
+| Code Formatting | Completed | Prettier integration with .prettierrc config |
+| Pre-commit Hooks | Completed | Husky + lint-staged for quality gates |
+| CI/CD Pipeline | Completed | GitHub Actions workflow for lint, test, build |
+| API Documentation | Completed | OpenAPI/Swagger spec at /api-docs |
+| Contributing Guide | Completed | CONTRIBUTING.md with developer guidelines |
 
-### v1.5 - Performance & Polish
+---
+
+## v1.5 - Performance & Polish (January 2026)
 *Focus: Speed and user experience*
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Bundle Optimization | Planned | Reduce JavaScript bundle size |
-| Virtual Scrolling | Planned | Handle large note lists efficiently |
-| Lazy Loading | Planned | Defer loading of images and attachments |
-| Service Worker Cache | Planned | Faster offline experience |
-| Skeleton Loaders | Planned | Better loading state indicators |
+| Bundle Optimization | Completed | Code splitting with manual chunks (React, MUI, Markdown, Collab) |
+| Route Lazy Loading | Completed | React.lazy() for all page components |
+| Lazy Loading | Completed | LazyImage component with Intersection Observer |
+| Service Worker Cache | Completed | VitePWA with workbox caching strategies |
+| Skeleton Loaders | Completed | PageLoader component with MUI Skeleton |
 
-### v1.6 - Mobile Experience
+---
+
+## v1.6 - Mobile Experience (January 2026)
 *Focus: Progressive Web App enhancements*
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| PWA Improvements | Planned | Install prompts, splash screens |
-| Touch Gestures | Planned | Swipe actions for note management |
-| Mobile Editor | Planned | Optimized editing on touch devices |
-| Push Notifications | Planned | Sync and mention notifications |
-| Offline Indicator | Planned | Improved sync status UI |
+| PWA Install Prompt | Completed | Smart install banner with dismiss option |
+| Touch Gesture Hooks | Completed | useSwipeGesture and useSwipeToAction for mobile |
+| Offline Indicator | Completed | Real-time banner showing online/offline status |
+| Service Worker Cache | Completed | Workbox caching for fonts, images, app shell |
 
-### v1.7 - React Native Mobile App
+---
+
+## v1.7 - React Native Mobile App (January 2026)
 *Focus: Native mobile experience*
 
 | Feature | Status | Description |
 |---------|--------|-------------|
+| Project Structure | Completed | React Native 0.73+ with TypeScript |
+| API Service | Completed | Axios client with auth interceptors |
+| State Management | Completed | Zustand store for notes |
 | Core Note CRUD | Planned | Create, read, update, delete notes |
-| Offline Storage | Planned | SQLite or WatermelonDB |
+| Offline Storage | Planned | SQLite for local persistence |
 | Server Sync | Planned | Full sync with existing API |
 | Push Notifications | Planned | FCM/APNs integration |
 | Biometric Auth | Planned | Fingerprint/Face ID support |
-| Share Extension | Planned | Share content to VibeNotes |
-| Home Widgets | Planned | Quick note access widgets |
+
+---
+
+## Upcoming Features
 
 ---
 

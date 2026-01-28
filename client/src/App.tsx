@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { authService } from './services/authService';
 import { analyticsService } from './services/analyticsService';
 import { PageLoader } from './components/PageLoader';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -28,6 +30,7 @@ function App() {
     return (
         <BrowserRouter>
             <AnalyticsTracker />
+            <OfflineIndicator />
             <Suspense fallback={<PageLoader />}>
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
@@ -43,6 +46,7 @@ function App() {
                     />
                 </Routes>
             </Suspense>
+            <PWAInstallPrompt />
         </BrowserRouter>
     );
 }
