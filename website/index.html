@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VibeNotes - A modern, offline-first note-taking app with AI-powered features, markdown support, and seamless sync across devices.">
+    <meta name="keywords" content="notes, markdown, offline, sync, productivity, note-taking">
+    <title>VibeNotes - Modern Note-Taking for Everyone</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container nav-content">
+            <div class="nav-brand">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span class="logo-text">VibeNotes</span>
+            </div>
+            
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#docs" class="nav-link">Docs</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="/client" class="btn btn-primary">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">
+                    Your thoughts, <span class="gradient-text">beautifully organized</span>
+                </h1>
+                <p class="hero-subtitle">
+                    A modern, offline-first note-taking app that works everywhere. 
+                    Capture ideas, write in Markdown, and sync seamlessly across all your devices.
+                </p>
+                <div class="hero-cta">
+                    <a href="/client" class="btn btn-primary btn-lg">Start Taking Notes</a>
+                    <a href="#features" class="btn btn-secondary btn-lg">Learn More</a>
+                </div>
+                <p class="hero-note">Free forever. No credit card required.</p>
+            </div>
+            
+            <div class="hero-image">
+                <div class="hero-image-wrapper">
+                    <div class="app-screenshot">
+                        <!-- Placeholder for app screenshot -->
+                        <div class="screenshot-placeholder">
+                            <svg viewBox="0 0 800 600" fill="none">
+                                <rect width="800" height="600" rx="12" fill="url(#gradient1)"/>
+                                <rect x="20" y="60" width="200" height="520" rx="8" fill="rgba(255,255,255,0.1)"/>
+                                <rect x="240" y="60" width="540" height="520" rx="8" fill="rgba(255,255,255,0.15)"/>
+                                <defs>
+                                    <linearGradient id="gradient1" x1="0" y1="0" x2="800" y2="600">
+                                        <stop offset="0%" stop-color="#4f46e5"/>
+                                        <stop offset="100%" stop-color="#7c3aed"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Everything you need to stay organized</h2>
+                <p class="section-subtitle">Powerful features that make note-taking effortless</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Lightning Fast</h3>
+                    <p class="feature-description">Offline-first architecture means your notes are always available, even without internet.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Markdown Support</h3>
+                    <p class="feature-description">Write in Markdown with live preview. Format text, add code blocks, and create lists effortlessly.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Seamless Sync</h3>
+                    <p class="feature-description">Your notes sync automatically across all devices. Work offline, sync when connected.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Powerful Search</h3>
+                    <p class="feature-description">Find anything instantly with full-text search across all your notes and tags.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Smart Tags</h3>
+                    <p class="feature-description">Organize with tags and filters. Keep your notes structured and easy to navigate.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Secure & Private</h3>
+                    <p class="feature-description">Your data is encrypted and secure. We respect your privacy and never sell your data.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="comparison">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Why VibeNotes?</h2>
+                <p class="section-subtitle">See how we compare to other note-taking apps</p>
+            </div>
+            
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>VibeNotes</th>
+                            <th>Notion</th>
+                            <th>Evernote</th>
+                            <th>Obsidian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Offline-First</td>
+                            <td class="check">✓</td>
+                            <td class="cross">✗</td>
+                            <td class="partial">~</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Markdown Support</td>
+                            <td class="check">✓</td>
+                            <td class="partial">~</td>
+                            <td class="cross">✗</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Free Forever</td>
+                            <td class="check">✓</td>
+                            <td class="partial">~</td>
+                            <td class="cross">✗</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Auto-Save</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>AI Features (Coming)</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="cross">✗</td>
+                            <td class="partial">~</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Simple, transparent pricing</h2>
+                <p class="section-subtitle">Start free, upgrade when you need more</p>
+            </div>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3 class="pricing-tier">Free</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount">$0</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>Unlimited notes</li>
+                        <li>Markdown editor</li>
+                        <li>Offline support</li>
+                        <li>Basic search</li>
+                        <li>Tags & filters</li>
+                        <li>5GB storage</li>
+                    </ul>
+                    <a href="/client" class="btn btn-secondary btn-block">Get Started</a>
+                </div>
+
+                <div class="pricing-card pricing-card-featured">
+                    <div class="pricing-badge">Most Popular</div>
+                    <div class="pricing-header">
+                        <h3 class="pricing-tier">Pro</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount">$9</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>Everything in Free</li>
+                        <li>AI-powered summaries</li>
+                        <li>Advanced search</li>
+                        <li>Version history</li>
+                        <li>File attachments</li>
+                        <li>50GB storage</li>
+                        <li>Priority support</li>
+                    </ul>
+                    <a href="/client" class="btn btn-primary btn-block">Start Free Trial</a>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3 class="pricing-tier">Team</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount">$19</span>
+                            <span class="price-period">/user/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>Everything in Pro</li>
+                        <li>Real-time collaboration</li>
+                        <li>Shared notebooks</li>
+                        <li>Team permissions</li>
+                        <li>SSO & SAML</li>
+                        <li>Unlimited storage</li>
+                        <li>Dedicated support</li>
+                    </ul>
+                    <a href="/client" class="btn btn-secondary btn-block">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-content">
+                <h2 class="cta-title">Ready to get started?</h2>
+                <p class="cta-subtitle">Join thousands of users who trust VibeNotes for their note-taking needs</p>
+                <a href="/client" class="btn btn-primary btn-lg">Start Taking Notes Now</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4 class="footer-title">VibeNotes</h4>
+                    <p class="footer-text">Modern note-taking for everyone</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4 class="footer-title">Product</h4>
+                    <ul class="footer-links">
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                        <li><a href="#docs">Documentation</a></li>
+                        <li><a href="#changelog">Changelog</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4 class="footer-title">Company</h4>
+                    <ul class="footer-links">
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                        <li><a href="#privacy">Privacy</a></li>
+                        <li><a href="#terms">Terms</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4 class="footer-title">Connect</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Twitter</a></li>
+                        <li><a href="#">GitHub</a></li>
+                        <li><a href="#">Discord</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 VibeNotes. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
