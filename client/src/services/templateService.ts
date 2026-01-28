@@ -251,6 +251,20 @@ export class TemplateService {
     }
 
     /**
+     * Update a custom template
+     */
+    static updateCustomTemplate(id: string, updates: Partial<Omit<Template, 'id'>>): Template | null {
+        const customTemplates = this.getCustomTemplates();
+        const index = customTemplates.findIndex(t => t.id === id);
+        if (index === -1) return null;
+
+        const updatedTemplate = { ...customTemplates[index], ...updates };
+        customTemplates[index] = updatedTemplate;
+        localStorage.setItem(this.CUSTOM_TEMPLATES_KEY, JSON.stringify(customTemplates));
+        return updatedTemplate;
+    }
+
+    /**
      * Get a template by ID
      */
     static getTemplateById(id: string): Template | undefined {
