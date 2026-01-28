@@ -48,6 +48,19 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
     const pendingSaveRef = useRef(false);
     const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
+    // Track what we originally loaded to prevent refresh loops
+    // This stores the values when we first load a note, so we can compare
+    // against our LOCAL edits, not the constantly-updating note prop
+    const loadedNoteRef = useRef<{ id: string; title: string; content: string; tags: string[] } | null>(null);
+
+    // Stable callback refs to prevent effect re-triggering
+    const onSaveRef = useRef(onSave);
+    const onErrorRef = useRef(onError);
+    useEffect(() => {
+        onSaveRef.current = onSave;
+        onErrorRef.current = onError;
+    }, [onSave, onError]);
+
     // Update refs when state changes
     useEffect(() => {
         contentRef.current = content;
@@ -74,7 +87,7 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
     const debouncedTitle = useDebounce(title, EDITOR_CONFIG.AUTO_SAVE_DELAY_MS);
     const debouncedTags = useDebounce(tags, EDITOR_CONFIG.AUTO_SAVE_DELAY_MS);
 
-    // Load note data when note changes
+    // Load note data when note changes (only on ID change, not every prop update)
     useEffect(() => {
         // Cancel any in-flight save when switching notes
         if (saveAbortControllerRef.current) {
@@ -85,6 +98,14 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
         pendingSaveRef.current = false;
 
         if (note) {
+            // Store the loaded values so we compare against them, not the updating prop
+            loadedNoteRef.current = {
+                id: note.id,
+                title: note.title,
+                content: note.content,
+                tags: note.tags || []
+            };
+
             setTitle(note.title);
             setContent(note.content);
             setTags(note.tags || []);
@@ -92,12 +113,14 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
             setLastSaved(null);
             setHasPendingChanges(false);
         } else {
+            loadedNoteRef.current = null;
             setTitle('');
             setContent('');
             setTags([]);
         }
     }, [note?.id]);
 
+    // Stable handleSave that uses refs - won't cause effect re-triggers
     const handleSave = useCallback(async (): Promise<void> => {
         const currentNote = noteRef.current;
         if (!currentNote) return;
@@ -127,10 +150,20 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
                 return;
             }
 
-            await onSave(currentNote.id, saveData);
+            // Use ref for stable callback reference
+            await onSaveRef.current(currentNote.id, saveData);
 
             // Check if aborted after save completed
             if (!abortController.signal.aborted) {
+                // Update loaded ref to match what we saved - prevents re-triggering
+                if (loadedNoteRef.current && loadedNoteRef.current.id === currentNote.id) {
+                    loadedNoteRef.current = {
+                        id: currentNote.id,
+                        title: saveData.title,
+                        content: saveData.content,
+                        tags: saveData.tags
+                    };
+                }
                 setLastSaved(new Date());
                 setHasPendingChanges(false);
             }
@@ -140,7 +173,7 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
                 return;
             }
             const errorMessage = error instanceof Error ? error.message : 'Failed to save note';
-            onError?.(errorMessage);
+            onErrorRef.current?.(errorMessage);
         } finally {
             isSavingRef.current = false;
             setIsSaving(false);
@@ -152,18 +185,21 @@ export function NoteEditor({ note, onSave, onError }: NoteEditorProps) {
                 setTimeout(() => handleSave(), 0);
             }
         }
-    }, [onSave, onError]);
+    }, []); // Empty deps - uses refs for all external values
 
     // Auto-save when debounced values change
+    // Compare against loadedNoteRef (what we originally loaded), not the note prop
+    // This prevents refresh loops when parent updates note state after save
     useEffect(() => {
-        if (note && (
-            debouncedTitle !== note.title ||
-            debouncedContent !== note.content ||
-            JSON.stringify(debouncedTags) !== JSON.stringify(note.tags)
+        const loaded = loadedNoteRef.current;
+        if (loaded && (
+            debouncedTitle !== loaded.title ||
+            debouncedContent !== loaded.content ||
+            JSON.stringify(debouncedTags) !== JSON.stringify(loaded.tags)
         )) {
             handleSave();
         }
-    }, [debouncedTitle, debouncedContent, debouncedTags, handleSave, note]);
+    }, [debouncedTitle, debouncedContent, debouncedTags, handleSave]);
 
     const handleCopy = async () => {
         try {
