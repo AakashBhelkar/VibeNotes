@@ -1,7 +1,9 @@
 import axios, { AxiosInstance } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = process.env.API_URL || 'http://localhost:3000';
+// Use your computer's IP address for mobile device access
+// Find your IP: Windows: ipconfig | Linux/Mac: ifconfig
+const API_URL = process.env.API_URL || 'http://192.168.1.2:3000';
 
 class ApiService {
     private client: AxiosInstance;

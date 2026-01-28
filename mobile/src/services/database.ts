@@ -1,18 +1,12 @@
-import SQLite, { SQLiteDatabase } from 'react-native-sqlite-storage';
+import * as SQLite from 'expo-sqlite';
 import { Note } from './api';
 
-SQLite.enablePromise(true);
-
 class DatabaseService {
-    private db: SQLiteDatabase | null = null;
+    private db: SQLite.SQLiteDatabase | null = null;
 
     async init(): Promise<void> {
         try {
-            this.db = await SQLite.openDatabase({
-                name: 'vibenotes.db',
-                location: 'default',
-            });
-
+            this.db = await SQLite.openDatabaseAsync('vibenotes.db');
             await this.createTables();
             console.log('Database initialized successfully');
         } catch (error) {
@@ -25,7 +19,7 @@ class DatabaseService {
         if (!this.db) throw new Error('Database not initialized');
 
         // Notes table
-        await this.db.executeSql(`
+        await this.db.execAsync(`
             CREATE TABLE IF NOT EXISTS notes (
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
@@ -42,7 +36,7 @@ class DatabaseService {
         `);
 
         // Sync queue table
-        await this.db.executeSql(`
+        await this.db.execAsync(`
             CREATE TABLE IF NOT EXISTS sync_queue (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 note_id TEXT NOT NULL,
@@ -52,7 +46,7 @@ class DatabaseService {
         `);
 
         // Settings table
-        await this.db.executeSql(`
+        await this.db.execAsync(`
             CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
                 value TEXT
@@ -64,28 +58,23 @@ class DatabaseService {
     async getAllNotes(): Promise<Note[]> {
         if (!this.db) throw new Error('Database not initialized');
 
-        const [results] = await this.db.executeSql(
+        const results = await this.db.getAllAsync<any>(
             'SELECT * FROM notes WHERE is_archived = 0 ORDER BY is_pinned DESC, updated_at DESC'
         );
 
-        const notes: Note[] = [];
-        for (let i = 0; i < results.rows.length; i++) {
-            const row = results.rows.item(i);
-            notes.push(this.rowToNote(row));
-        }
-        return notes;
+        return results.map((row) => this.rowToNote(row));
     }
 
     async getNote(id: string): Promise<Note | null> {
         if (!this.db) throw new Error('Database not initialized');
 
-        const [results] = await this.db.executeSql(
+        const result = await this.db.getFirstAsync<any>(
             'SELECT * FROM notes WHERE id = ?',
             [id]
         );
 
-        if (results.rows.length === 0) return null;
-        return this.rowToNote(results.rows.item(0));
+        if (!result) return null;
+        return this.rowToNote(result);
     }
 
     async saveNote(note: Note, pendingSync: boolean = true): Promise<void> {
@@ -94,7 +83,7 @@ class DatabaseService {
         const tags = JSON.stringify(note.tags || []);
         const now = new Date().toISOString();
 
-        await this.db.executeSql(
+        await this.db.runAsync(
             `INSERT OR REPLACE INTO notes
             (id, title, content, tags, is_pinned, is_archived, version, created_at, updated_at, pending_sync)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -116,14 +105,14 @@ class DatabaseService {
     async deleteNote(id: string): Promise<void> {
         if (!this.db) throw new Error('Database not initialized');
 
-        await this.db.executeSql('DELETE FROM notes WHERE id = ?', [id]);
+        await this.db.runAsync('DELETE FROM notes WHERE id = ?', [id]);
     }
 
     async markNoteSynced(id: string): Promise<void> {
         if (!this.db) throw new Error('Database not initialized');
 
         const now = new Date().toISOString();
-        await this.db.executeSql(
+        await this.db.runAsync(
             'UPDATE notes SET pending_sync = 0, synced_at = ? WHERE id = ?',
             [now, id]
         );
@@ -132,15 +121,11 @@ class DatabaseService {
     async getPendingSyncNotes(): Promise<Note[]> {
         if (!this.db) throw new Error('Database not initialized');
 
-        const [results] = await this.db.executeSql(
+        const results = await this.db.getAllAsync<any>(
             'SELECT * FROM notes WHERE pending_sync = 1'
         );
 
-        const notes: Note[] = [];
-        for (let i = 0; i < results.rows.length; i++) {
-            notes.push(this.rowToNote(results.rows.item(i)));
-        }
-        return notes;
+        return results.map((row) => this.rowToNote(row));
     }
 
     // Sync queue operations
@@ -148,7 +133,7 @@ class DatabaseService {
         if (!this.db) throw new Error('Database not initialized');
 
         const now = new Date().toISOString();
-        await this.db.executeSql(
+        await this.db.runAsync(
             'INSERT INTO sync_queue (note_id, action, created_at) VALUES (?, ?, ?)',
             [noteId, action, now]
         );
@@ -157,52 +142,47 @@ class DatabaseService {
     async getSyncQueue(): Promise<Array<{ id: number; noteId: string; action: string; createdAt: string }>> {
         if (!this.db) throw new Error('Database not initialized');
 
-        const [results] = await this.db.executeSql(
+        const results = await this.db.getAllAsync<any>(
             'SELECT * FROM sync_queue ORDER BY created_at ASC'
         );
 
-        const queue = [];
-        for (let i = 0; i < results.rows.length; i++) {
-            const row = results.rows.item(i);
-            queue.push({
-                id: row.id,
-                noteId: row.note_id,
-                action: row.action,
-                createdAt: row.created_at,
-            });
-        }
-        return queue;
+        return results.map((row) => ({
+            id: row.id,
+            noteId: row.note_id,
+            action: row.action,
+            createdAt: row.created_at,
+        }));
     }
 
     async removeSyncQueueItem(id: number): Promise<void> {
         if (!this.db) throw new Error('Database not initialized');
 
-        await this.db.executeSql('DELETE FROM sync_queue WHERE id = ?', [id]);
+        await this.db.runAsync('DELETE FROM sync_queue WHERE id = ?', [id]);
     }
 
     async clearSyncQueue(): Promise<void> {
         if (!this.db) throw new Error('Database not initialized');
 
-        await this.db.executeSql('DELETE FROM sync_queue');
+        await this.db.runAsync('DELETE FROM sync_queue');
     }
 
     // Settings operations
     async getSetting(key: string): Promise<string | null> {
         if (!this.db) throw new Error('Database not initialized');
 
-        const [results] = await this.db.executeSql(
+        const result = await this.db.getFirstAsync<any>(
             'SELECT value FROM settings WHERE key = ?',
             [key]
         );
 
-        if (results.rows.length === 0) return null;
-        return results.rows.item(0).value;
+        if (!result) return null;
+        return result.value;
     }
 
     async setSetting(key: string, value: string): Promise<void> {
         if (!this.db) throw new Error('Database not initialized');
 
-        await this.db.executeSql(
+        await this.db.runAsync(
             'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
             [key, value]
         );
@@ -243,7 +223,7 @@ class DatabaseService {
     // Close database connection
     async close(): Promise<void> {
         if (this.db) {
-            await this.db.close();
+            await this.db.closeAsync();
             this.db = null;
         }
     }

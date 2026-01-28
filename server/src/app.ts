@@ -40,7 +40,24 @@ const generalLimiter = rateLimit({
 
 app.use(express.json());
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+
+        const allowedOrigins = [
+            'http://localhost:5173',
+            'http://localhost:8081',
+            'http://192.168.1.2:8081',
+            process.env.CORS_ORIGIN,
+        ].filter(Boolean);
+
+        // Allow all origins in development, or check against allowed list
+        if (process.env.NODE_ENV !== 'production' || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
 app.use(helmet({
