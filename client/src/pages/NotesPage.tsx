@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { ExportMenu } from '@/components/ExportMenu';
@@ -8,7 +8,20 @@ import { useNotes } from '@/hooks/useNotes';
 import { useSyncStatus } from '@/hooks/useSync';
 import { Note, NoteVersion } from '@/lib/db';
 import { Button } from '@/components/ui/button';
-import { Cloud, CloudOff, RefreshCw, LogOut, Clock, Keyboard } from 'lucide-react';
+import {
+    Cloud,
+    CloudOff,
+    RefreshCw,
+    LogOut,
+    Clock,
+    Keyboard,
+    Network,
+    Activity,
+    MessageSquare,
+    Users,
+    Search,
+    FolderTree as FolderIcon,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { ModeToggle } from '@/components/ModeToggle';
@@ -21,6 +34,14 @@ import { analyticsService } from '@/services/analyticsService';
 import { VersionHistory } from '@/components/VersionHistory';
 import { KeyboardShortcutsPanel } from '@/components/KeyboardShortcutsPanel';
 import { ColorLabelPicker } from '@/components/ColorLabelPicker';
+import { FolderTree } from '@/components/FolderTree';
+import { GraphView } from '@/components/GraphView';
+import { AdvancedSearchPanel, SearchFilters } from '@/components/AdvancedSearchPanel';
+import { ActivityFeed } from '@/components/ActivityFeed';
+import { CommentThread } from '@/components/CommentThread';
+import { WorkspaceManager } from '@/components/WorkspaceManager';
+import { CollaborationStatus } from '@/components/CollaboratorCursors';
+import { useCollaboration } from '@/hooks/useCollaboration';
 
 /**
  * Main Notes page with list and editor
@@ -35,9 +56,29 @@ export default function NotesPage() {
     const [showArchived, setShowArchived] = useState(false);
     const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
     const [distractionFreeMode, setDistractionFreeMode] = useState(false);
+    const [showGraphView, setShowGraphView] = useState(false);
+    const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+    const [showActivityFeed, setShowActivityFeed] = useState(false);
+    const [showComments, setShowComments] = useState(false);
+    const [showWorkspaces, setShowWorkspaces] = useState(false);
+    const [showFolders, setShowFolders] = useState(true);
+    const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
     const { notes, createNote, updateNote, deleteNote, searchNotes, refresh, fetchArchivedNotes, archivedNotes } = useNotes();
+    const collaboration = useCollaboration(selectedNote?.id || null);
     const { isOnline, isSyncing, sync } = useSyncStatus();
+
+    // Extract all unique tags from notes
+    const allTags = useMemo(() => {
+        const tagSet = new Set<string>();
+        notes.forEach(note => {
+            note.tags?.forEach(tag => tagSet.add(tag));
+        });
+        return Array.from(tagSet).sort();
+    }, [notes]);
+
+    // Search filters state for advanced search (used by AdvancedSearchPanel)
+    const [_searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
 
     // Check if this is the user's first visit
     useEffect(() => {
@@ -287,6 +328,50 @@ export default function NotesPage() {
                         onError={setErrorMessage}
                     />
 
+                    {/* Graph View */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowGraphView(true)}
+                        aria-label="Graph view"
+                        title="Graph View"
+                    >
+                        <Network className="h-4 w-4" />
+                    </Button>
+
+                    {/* Advanced Search */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowAdvancedSearch(true)}
+                        aria-label="Advanced search"
+                        title="Advanced Search"
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
+
+                    {/* Activity Feed */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowActivityFeed(true)}
+                        aria-label="Activity feed"
+                        title="Activity Feed"
+                    >
+                        <Activity className="h-4 w-4" />
+                    </Button>
+
+                    {/* Workspaces */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowWorkspaces(true)}
+                        aria-label="Workspaces"
+                        title="Workspaces"
+                    >
+                        <Users className="h-4 w-4" />
+                    </Button>
+
                     {/* Keyboard Shortcuts */}
                     <Button
                         variant="ghost"
@@ -313,25 +398,52 @@ export default function NotesPage() {
             <div className="flex-1 flex overflow-hidden">
                 {/* Note List Sidebar - Hidden in distraction-free mode */}
                 {!distractionFreeMode && (
-                <div className="w-80 flex-shrink-0">
-                    <NoteList
-                        notes={showArchived ? archivedNotes : notes}
-                        selectedNote={selectedNote}
-                        onSelectNote={setSelectedNote}
-                        onCreateNote={handleCreateNote}
-                        onDeleteNote={handleDeleteNote}
-                        onTogglePin={handleTogglePin}
-                        onToggleArchive={handleToggleArchive}
-                        onSearch={searchNotes}
-                        showArchived={showArchived}
-                        onToggleShowArchived={handleToggleShowArchived}
-                        templateSelector={
-                            <TemplateSelector
-                                onSelectTemplate={handleSelectTemplate}
-                                onCreateDailyNote={handleCreateDailyNote}
+                <div className="w-80 flex-shrink-0 flex flex-col border-r">
+                    {/* Folder Tree Toggle */}
+                    <div className="p-2 border-b flex items-center justify-between">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowFolders(!showFolders)}
+                            className="w-full justify-start"
+                        >
+                            <FolderIcon className="h-4 w-4 mr-2" />
+                            {showFolders ? 'Hide Folders' : 'Show Folders'}
+                        </Button>
+                    </div>
+
+                    {/* Folder Tree */}
+                    {showFolders && (
+                        <div className="p-2 border-b max-h-48 overflow-y-auto">
+                            <FolderTree
+                                selectedFolderId={selectedFolderId}
+                                onSelectFolder={setSelectedFolderId}
+                                onError={setErrorMessage}
                             />
-                        }
-                    />
+                        </div>
+                    )}
+
+                    {/* Note List */}
+                    <div className="flex-1 overflow-hidden">
+                        <NoteList
+                            notes={showArchived ? archivedNotes : notes}
+                            selectedNote={selectedNote}
+                            onSelectNote={setSelectedNote}
+                            onCreateNote={handleCreateNote}
+                            onDeleteNote={handleDeleteNote}
+                            onTogglePin={handleTogglePin}
+                            onToggleArchive={handleToggleArchive}
+                            onSearch={searchNotes}
+                            showArchived={showArchived}
+                            onToggleShowArchived={handleToggleShowArchived}
+                            templateSelector={
+                                <TemplateSelector
+                                    onSelectTemplate={handleSelectTemplate}
+                                    onCreateDailyNote={handleCreateDailyNote}
+                                />
+                            }
+                        />
+                    </div>
                 </div>
                 )}
 
@@ -356,6 +468,23 @@ export default function NotesPage() {
                                 <Clock className="h-4 w-4 mr-2" />
                                 History
                             </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowComments(!showComments)}
+                                title="Comments"
+                            >
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Comments
+                            </Button>
+                            <div className="ml-auto">
+                                <CollaborationStatus
+                                    isConnected={collaboration.isConnected}
+                                    isCollaborating={collaboration.isCollaborating}
+                                    collaborators={collaboration.collaborators}
+                                    error={collaboration.error}
+                                />
+                            </div>
                         </div>
                     )}
                     {/* Distraction-free mode exit hint */}
@@ -413,6 +542,62 @@ export default function NotesPage() {
                 isOpen={showKeyboardShortcuts}
                 onClose={() => setShowKeyboardShortcuts(false)}
             />
+
+            {/* Graph View Modal */}
+            {showGraphView && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-background rounded-lg shadow-lg w-[90vw] h-[80vh] max-w-6xl flex flex-col">
+                        <GraphView
+                            notes={notes}
+                            onSelectNote={(noteId) => {
+                                const note = notes.find(n => n.id === noteId);
+                                if (note) setSelectedNote(note);
+                                setShowGraphView(false);
+                            }}
+                            onClose={() => setShowGraphView(false)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Advanced Search Panel */}
+            {showAdvancedSearch && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-background rounded-lg shadow-lg w-[90vw] max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <AdvancedSearchPanel
+                            notes={notes}
+                            allTags={allTags}
+                            onFiltersChange={setSearchFilters}
+                            onClose={() => setShowAdvancedSearch(false)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Activity Feed Panel */}
+            {showActivityFeed && (
+                <ActivityFeed
+                    onClose={() => setShowActivityFeed(false)}
+                    onSelectNote={(noteId) => {
+                        const note = notes.find(n => n.id === noteId);
+                        if (note) setSelectedNote(note);
+                        setShowActivityFeed(false);
+                    }}
+                />
+            )}
+
+            {/* Comments Panel */}
+            {showComments && selectedNote && (
+                <CommentThread
+                    noteId={selectedNote.id}
+                    onClose={() => setShowComments(false)}
+                />
+            )}
+
+            {/* Workspace Manager Modal */}
+            {showWorkspaces && (
+                <WorkspaceManager onClose={() => setShowWorkspaces(false)} />
+            )}
         </div>
     );
 }
