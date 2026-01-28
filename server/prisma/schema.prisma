@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  displayName String?
+  createdAt   DateTime @default(now())
+  notes       Note[]
+  colorLabels ColorLabel[]
+  folders     Folder[]
+  activities  Activity[]
+  comments    Comment[]
+  ownedWorkspaces    Workspace[]         @relation("WorkspaceOwner")
+  workspaceMemberships WorkspaceMember[]
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  content     String
+  tags        String[]
+  folderId    String?
+  workspaceId String?  // Optional workspace association
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  version     Int      @default(1)
+  isArchived  Boolean  @default(false)
+  isPinned    Boolean  @default(false)
+  deletedAt   DateTime?
+
+  user        User       @relation(fields: [userId], references: [id])
+  folder      Folder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  attachments Attachment[]
+  colorLabels NoteColorLabel[]
+  activities  Activity[]
+  comments    Comment[]
+
+  @@index([workspaceId])
+}
+
+model Attachment {
+  id       String @id @default(uuid())
+  noteId   String
+  url      String
+  fileName String
+  size     Int
+
+  note Note @relation(fields: [noteId], references: [id])
+}
+
+model ColorLabel {
+  id        String   @id @default(uuid())
+  name      String
+  color     String   // Hex color code (e.g., #FF5733)
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User             @relation(fields: [userId], references: [id])
+  notes NoteColorLabel[]
+}
+
+model NoteColorLabel {
+  noteId       String
+  colorLabelId String
+  assignedAt   DateTime @default(now())
+
+  note       Note       @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  colorLabel ColorLabel @relation(fields: [colorLabelId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, colorLabelId])
+}
+
+model Folder {
+  id        String   @id @default(uuid())
+  name      String
+  parentId  String?
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent   Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children Folder[] @relation("FolderHierarchy")
+  user     User     @relation(fields: [userId], references: [id])
+  notes    Note[]
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  type      String   // "note_created", "note_updated", "note_deleted", "note_archived", "folder_created", etc.
+  userId    String
+  noteId    String?
+  metadata  Json?    // Additional context like { title: "Note Title", changes: [...] }
+  createdAt DateTime @default(now())
+
+  user User  @relation(fields: [userId], references: [id])
+  note Note? @relation(fields: [noteId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  noteId    String
+  userId    String
+  parentId  String?  // For threaded replies
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  note    Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([noteId, createdAt])
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner   User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members WorkspaceMember[]
+  notes   Note[]
+}
+
+model WorkspaceMember {
+  workspaceId String
+  userId      String
+  role        String   // "admin", "editor", "viewer"
+  joinedAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+}
