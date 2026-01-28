@@ -34,20 +34,20 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const NoteController = __importStar(require("../controllers/NoteController"));
+const ColorLabelController = __importStar(require("../controllers/ColorLabelController"));
 const auth_1 = require("../middleware/auth");
-const validate_1 = require("../middleware/validate");
-const noteValidationSchemas_1 = require("../utils/noteValidationSchemas");
 const router = (0, express_1.Router)();
-// All note routes require authentication
+// All color label routes require authentication
 router.use(auth_1.authenticate);
-router.get('/', NoteController.getAllNotes);
-router.post('/', (0, validate_1.validate)(noteValidationSchemas_1.createNoteSchema), NoteController.createNote);
-// Trash routes (must be before /:id to avoid conflict)
-router.get('/trash', NoteController.getTrash);
-router.post('/:id/restore', NoteController.restoreNote);
-router.delete('/:id/permanent', NoteController.permanentDelete);
-router.get('/:id', NoteController.getNoteById);
-router.put('/:id', (0, validate_1.validate)(noteValidationSchemas_1.updateNoteSchema), NoteController.updateNote);
-router.delete('/:id', NoteController.deleteNote);
+// Color Label CRUD
+router.get('/', ColorLabelController.getAllLabels);
+router.post('/', ColorLabelController.createLabel);
+router.get('/:id', ColorLabelController.getLabelById);
+router.put('/:id', ColorLabelController.updateLabel);
+router.delete('/:id', ColorLabelController.deleteLabel);
+// Note-Label associations
+router.get('/notes/:noteId', ColorLabelController.getNoteLabels);
+router.put('/notes/:noteId', ColorLabelController.updateNoteLabels);
+router.post('/notes/:noteId/labels/:labelId', ColorLabelController.assignLabelToNote);
+router.delete('/notes/:noteId/labels/:labelId', ColorLabelController.removeLabelFromNote);
 exports.default = router;

@@ -34,20 +34,28 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const NoteController = __importStar(require("../controllers/NoteController"));
+const CommentController = __importStar(require("../controllers/CommentController"));
 const auth_1 = require("../middleware/auth");
-const validate_1 = require("../middleware/validate");
-const noteValidationSchemas_1 = require("../utils/noteValidationSchemas");
 const router = (0, express_1.Router)();
-// All note routes require authentication
+// All routes require authentication
 router.use(auth_1.authenticate);
-router.get('/', NoteController.getAllNotes);
-router.post('/', (0, validate_1.validate)(noteValidationSchemas_1.createNoteSchema), NoteController.createNote);
-// Trash routes (must be before /:id to avoid conflict)
-router.get('/trash', NoteController.getTrash);
-router.post('/:id/restore', NoteController.restoreNote);
-router.delete('/:id/permanent', NoteController.permanentDelete);
-router.get('/:id', NoteController.getNoteById);
-router.put('/:id', (0, validate_1.validate)(noteValidationSchemas_1.updateNoteSchema), NoteController.updateNote);
-router.delete('/:id', NoteController.deleteNote);
+/**
+ * Comment Routes
+ *
+ * POST /api/comments - Create a new comment
+ * GET /api/comments/note/:noteId - Get comments for a note
+ * GET /api/comments/note/:noteId/count - Get comment count for a note
+ * PUT /api/comments/:id - Update a comment
+ * DELETE /api/comments/:id - Delete a comment
+ */
+// Create a new comment
+router.post('/', CommentController.createComment);
+// Get comments for a note
+router.get('/note/:noteId', CommentController.getComments);
+// Get comment count for a note
+router.get('/note/:noteId/count', CommentController.getCommentCount);
+// Update a comment
+router.put('/:id', CommentController.updateComment);
+// Delete a comment
+router.delete('/:id', CommentController.deleteComment);
 exports.default = router;

@@ -4,7 +4,10 @@ exports.errorHandler = void 0;
 const AppError_1 = require("../utils/AppError");
 const zod_1 = require("zod");
 const errorHandler = (err, req, res, next) => {
-    console.error(err);
+    // Only log errors in development
+    if (process.env.NODE_ENV !== 'production') {
+        console.error('[Error]', err.message);
+    }
     if (err instanceof AppError_1.AppError) {
         return res.status(err.statusCode).json({
             error: {

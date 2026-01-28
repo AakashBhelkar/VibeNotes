@@ -51,13 +51,12 @@ class AttachmentService {
         // Extract file path from URL
         const urlParts = attachment.url.split('/');
         const fileName = urlParts[urlParts.length - 1];
-        // Delete from storage
+        // Delete from storage (continue with database deletion even if storage deletion fails)
         try {
             await this.storageService.deleteFile(fileName);
         }
-        catch (error) {
-            console.error('Failed to delete file from storage:', error);
-            // Continue with database deletion even if storage deletion fails
+        catch {
+            // Storage deletion failed, but we still want to clean up the database record
         }
         // Delete from database
         await this.attachmentRepository.delete(attachmentId);
@@ -74,8 +73,8 @@ class AttachmentService {
                 const fileName = urlParts[urlParts.length - 1];
                 await this.storageService.deleteFile(fileName);
             }
-            catch (error) {
-                console.error(`Failed to delete file ${attachment.fileName} from storage:`, error);
+            catch {
+                // Continue even if individual file deletion fails
             }
         }
         // Delete all records from database

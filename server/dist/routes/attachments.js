@@ -11,6 +11,7 @@ const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const attachmentValidationSchemas_1 = require("../utils/attachmentValidationSchemas");
 const AppError_1 = require("../utils/AppError");
+const constants_1 = require("../config/constants");
 const multer_1 = __importDefault(require("multer"));
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
@@ -21,18 +22,10 @@ const attachmentService = new AttachmentService_1.AttachmentService(attachmentRe
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
     limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
+        fileSize: constants_1.STORAGE_CONFIG.MAX_FILE_SIZE_BYTES,
     },
     fileFilter: (req, file, cb) => {
-        const allowedMimeTypes = [
-            'image/jpeg',
-            'image/jpg',
-            'image/png',
-            'image/gif',
-            'image/webp',
-            'application/pdf',
-        ];
-        if (allowedMimeTypes.includes(file.mimetype)) {
+        if (constants_1.STORAGE_CONFIG.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
             cb(null, true);
         }
         else {
@@ -122,8 +115,8 @@ router.get('/storage/usage', auth_1.authenticateToken, async (req, res, next) =>
         res.json({
             usage,
             limit: {
-                totalBytes: 100 * 1024 * 1024, // 100MB
-                totalMB: 100,
+                totalBytes: constants_1.STORAGE_CONFIG.MAX_STORAGE_PER_USER_BYTES,
+                totalMB: constants_1.STORAGE_CONFIG.MAX_STORAGE_PER_USER_MB,
             },
         });
     }

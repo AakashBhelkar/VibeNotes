@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.searchNotes = exports.deleteNote = exports.updateNote = exports.createNote = exports.getNoteById = exports.getAllNotes = void 0;
+exports.getArchivedNotes = exports.searchNotes = exports.permanentDeleteNote = exports.restoreNote = exports.getTrashNotes = exports.deleteNote = exports.updateNote = exports.createNote = exports.getNoteById = exports.getAllNotes = void 0;
 const NoteRepository = __importStar(require("../repositories/NoteRepository"));
 const AppError_1 = require("../utils/AppError");
 /**
@@ -96,31 +96,80 @@ const updateNote = async (id, userId, input) => {
 };
 exports.updateNote = updateNote;
 /**
- * Delete a note
+ * Delete a note (soft delete - move to trash)
  * @param id - The note ID
  * @param userId - The user's ID
  * @returns Success message
  * @throws NotFoundError if note doesn't exist or user doesn't own it
  */
 const deleteNote = async (id, userId) => {
-    // Verify note exists and user owns it
     const existingNote = await NoteRepository.findById(id, userId);
     if (!existingNote) {
         throw new AppError_1.NotFoundError(`Note with ID ${id} not found`);
     }
-    await NoteRepository.remove(id, userId);
-    return { message: 'Note deleted successfully' };
+    await NoteRepository.softDelete(id, userId);
+    return { message: 'Note moved to trash' };
 };
 exports.deleteNote = deleteNote;
+/**
+ * Get all notes in trash for a user
+ * @param userId - The user's ID
+ * @returns Array of trashed notes
+ */
+const getTrashNotes = async (userId) => {
+    return NoteRepository.findDeletedByUserId(userId);
+};
+exports.getTrashNotes = getTrashNotes;
+/**
+ * Restore a note from trash
+ * @param id - The note ID
+ * @param userId - The user's ID
+ * @returns The restored note
+ * @throws NotFoundError if note doesn't exist or user doesn't own it
+ */
+const restoreNote = async (id, userId) => {
+    const existingNote = await NoteRepository.findById(id, userId);
+    if (!existingNote) {
+        throw new AppError_1.NotFoundError(`Note with ID ${id} not found`);
+    }
+    return NoteRepository.restore(id, userId);
+};
+exports.restoreNote = restoreNote;
+/**
+ * Permanently delete a note
+ * @param id - The note ID
+ * @param userId - The user's ID
+ * @returns Success message
+ * @throws NotFoundError if note doesn't exist or user doesn't own it
+ */
+const permanentDeleteNote = async (id, userId) => {
+    const existingNote = await NoteRepository.findById(id, userId);
+    if (!existingNote) {
+        throw new AppError_1.NotFoundError(`Note with ID ${id} not found`);
+    }
+    await NoteRepository.permanentDelete(id, userId);
+    return { message: 'Note permanently deleted' };
+};
+exports.permanentDeleteNote = permanentDeleteNote;
 /**
  * Search notes by query and/or tag
  * @param userId - The user's ID
  * @param query - Optional search query
  * @param tag - Optional tag filter
+ * @param includeArchived - Whether to include archived notes
  * @returns Array of matching notes
  */
-const searchNotes = async (userId, query, tag) => {
-    const notes = await NoteRepository.searchNotes(userId, query || '', tag);
+const searchNotes = async (userId, query, tag, includeArchived = false) => {
+    const notes = await NoteRepository.searchNotes(userId, query || '', tag, includeArchived);
     return notes;
 };
 exports.searchNotes = searchNotes;
+/**
+ * Get all archived notes for a user
+ * @param userId - The user's ID
+ * @returns Array of archived notes
+ */
+const getArchivedNotes = async (userId) => {
+    return NoteRepository.findArchivedByUserId(userId);
+};
+exports.getArchivedNotes = getArchivedNotes;

@@ -33,157 +33,171 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.permanentDelete = exports.restoreNote = exports.getTrash = exports.deleteNote = exports.updateNote = exports.createNote = exports.getNoteById = exports.getAllNotes = void 0;
-const NoteService = __importStar(require("../services/NoteService"));
+exports.updateNoteLabels = exports.removeLabelFromNote = exports.assignLabelToNote = exports.getNoteLabels = exports.deleteLabel = exports.updateLabel = exports.createLabel = exports.getLabelById = exports.getAllLabels = void 0;
+const ColorLabelService = __importStar(require("../services/ColorLabelService"));
 const AppError_1 = require("../utils/AppError");
 /**
- * Get all notes for the authenticated user
- * Supports optional search query, tag filtering, and archived filter
- * Query params: q (search), tag (filter), archived (true|all|false)
+ * Color Label Controller
+ * Handles HTTP requests for color label operations
  */
-const getAllNotes = async (req, res, next) => {
+/**
+ * Get all color labels for the authenticated user
+ */
+const getAllLabels = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
-        const { q, tag, archived } = req.query;
-        // If archived=true, return only archived notes
-        if (archived === 'true') {
-            const notes = await NoteService.getArchivedNotes(userId);
-            res.json(notes);
-            return;
-        }
-        const notes = await NoteService.searchNotes(userId, q, tag, archived === 'all' // Include archived if ?archived=all
-        );
-        res.json(notes);
+        const labels = await ColorLabelService.getAllLabels(userId);
+        res.json(labels);
     }
     catch (error) {
         next(error);
     }
 };
-exports.getAllNotes = getAllNotes;
+exports.getAllLabels = getAllLabels;
 /**
- * Get a specific note by ID
+ * Get a specific color label by ID
  */
-const getNoteById = async (req, res, next) => {
+const getLabelById = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
         const { id } = req.params;
-        const note = await NoteService.getNoteById(id, userId);
-        res.json(note);
+        const label = await ColorLabelService.getLabelById(id, userId);
+        res.json(label);
     }
     catch (error) {
         next(error);
     }
 };
-exports.getNoteById = getNoteById;
+exports.getLabelById = getLabelById;
 /**
- * Create a new note
+ * Create a new color label
  */
-const createNote = async (req, res, next) => {
+const createLabel = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
-        const note = await NoteService.createNote(userId, req.body);
-        res.status(201).json(note);
+        const label = await ColorLabelService.createLabel(userId, req.body);
+        res.status(201).json(label);
     }
     catch (error) {
         next(error);
     }
 };
-exports.createNote = createNote;
+exports.createLabel = createLabel;
 /**
- * Update an existing note
+ * Update an existing color label
  */
-const updateNote = async (req, res, next) => {
-    try {
-        if (!req.user?.id) {
-            throw new AppError_1.UnauthorizedError('User not authenticated');
-        }
-        const userId = req.user.id;
-        const { id } = req.params;
-        const note = await NoteService.updateNote(id, userId, req.body);
-        res.json(note);
-    }
-    catch (error) {
-        next(error);
-    }
-};
-exports.updateNote = updateNote;
-/**
- * Delete a note (soft delete - move to trash)
- */
-const deleteNote = async (req, res, next) => {
+const updateLabel = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
         const { id } = req.params;
-        const result = await NoteService.deleteNote(id, userId);
+        const label = await ColorLabelService.updateLabel(id, userId, req.body);
+        res.json(label);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.updateLabel = updateLabel;
+/**
+ * Delete a color label
+ */
+const deleteLabel = async (req, res, next) => {
+    try {
+        if (!req.user?.id) {
+            throw new AppError_1.UnauthorizedError('User not authenticated');
+        }
+        const userId = req.user.id;
+        const { id } = req.params;
+        const result = await ColorLabelService.deleteLabel(id, userId);
         res.json(result);
     }
     catch (error) {
         next(error);
     }
 };
-exports.deleteNote = deleteNote;
+exports.deleteLabel = deleteLabel;
 /**
- * Get all notes in trash
+ * Get all labels assigned to a note
  */
-const getTrash = async (req, res, next) => {
+const getNoteLabels = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
-        const notes = await NoteService.getTrashNotes(userId);
-        res.json(notes);
+        const { noteId } = req.params;
+        const labels = await ColorLabelService.getNoteLabels(noteId, userId);
+        res.json(labels);
     }
     catch (error) {
         next(error);
     }
 };
-exports.getTrash = getTrash;
+exports.getNoteLabels = getNoteLabels;
 /**
- * Restore a note from trash
+ * Assign a label to a note
  */
-const restoreNote = async (req, res, next) => {
+const assignLabelToNote = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
-        const { id } = req.params;
-        const note = await NoteService.restoreNote(id, userId);
-        res.json(note);
-    }
-    catch (error) {
-        next(error);
-    }
-};
-exports.restoreNote = restoreNote;
-/**
- * Permanently delete a note
- */
-const permanentDelete = async (req, res, next) => {
-    try {
-        if (!req.user?.id) {
-            throw new AppError_1.UnauthorizedError('User not authenticated');
-        }
-        const userId = req.user.id;
-        const { id } = req.params;
-        const result = await NoteService.permanentDeleteNote(id, userId);
+        const { noteId, labelId } = req.params;
+        const result = await ColorLabelService.assignLabelToNote(noteId, labelId, userId);
         res.json(result);
     }
     catch (error) {
         next(error);
     }
 };
-exports.permanentDelete = permanentDelete;
+exports.assignLabelToNote = assignLabelToNote;
+/**
+ * Remove a label from a note
+ */
+const removeLabelFromNote = async (req, res, next) => {
+    try {
+        if (!req.user?.id) {
+            throw new AppError_1.UnauthorizedError('User not authenticated');
+        }
+        const userId = req.user.id;
+        const { noteId, labelId } = req.params;
+        const result = await ColorLabelService.removeLabelFromNote(noteId, labelId, userId);
+        res.json(result);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.removeLabelFromNote = removeLabelFromNote;
+/**
+ * Update all labels for a note (replace existing)
+ */
+const updateNoteLabels = async (req, res, next) => {
+    try {
+        if (!req.user?.id) {
+            throw new AppError_1.UnauthorizedError('User not authenticated');
+        }
+        const userId = req.user.id;
+        const { noteId } = req.params;
+        const { labelIds } = req.body;
+        const result = await ColorLabelService.updateNoteLabels(noteId, labelIds || [], userId);
+        res.json(result);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.updateNoteLabels = updateNoteLabels;

@@ -33,157 +33,170 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.permanentDelete = exports.restoreNote = exports.getTrash = exports.deleteNote = exports.updateNote = exports.createNote = exports.getNoteById = exports.getAllNotes = void 0;
-const NoteService = __importStar(require("../services/NoteService"));
+exports.getNotesInFolder = exports.moveNoteToFolder = exports.deleteFolder = exports.updateFolder = exports.createFolder = exports.getFolderPath = exports.getFolderById = exports.getFolderTree = exports.getAllFolders = void 0;
+const FolderService = __importStar(require("../services/FolderService"));
 const AppError_1 = require("../utils/AppError");
 /**
- * Get all notes for the authenticated user
- * Supports optional search query, tag filtering, and archived filter
- * Query params: q (search), tag (filter), archived (true|all|false)
+ * Folder Controller
+ * Handles HTTP requests for folder operations
  */
-const getAllNotes = async (req, res, next) => {
+/**
+ * Get all folders for the authenticated user
+ */
+const getAllFolders = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
-        const { q, tag, archived } = req.query;
-        // If archived=true, return only archived notes
-        if (archived === 'true') {
-            const notes = await NoteService.getArchivedNotes(userId);
-            res.json(notes);
-            return;
-        }
-        const notes = await NoteService.searchNotes(userId, q, tag, archived === 'all' // Include archived if ?archived=all
-        );
-        res.json(notes);
+        const folders = await FolderService.getAllFolders(userId);
+        res.json(folders);
     }
     catch (error) {
         next(error);
     }
 };
-exports.getAllNotes = getAllNotes;
+exports.getAllFolders = getAllFolders;
 /**
- * Get a specific note by ID
+ * Get folders as tree structure
  */
-const getNoteById = async (req, res, next) => {
+const getFolderTree = async (req, res, next) => {
+    try {
+        if (!req.user?.id) {
+            throw new AppError_1.UnauthorizedError('User not authenticated');
+        }
+        const userId = req.user.id;
+        const tree = await FolderService.getFolderTree(userId);
+        res.json(tree);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getFolderTree = getFolderTree;
+/**
+ * Get a specific folder by ID
+ */
+const getFolderById = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
         const { id } = req.params;
-        const note = await NoteService.getNoteById(id, userId);
-        res.json(note);
+        const folder = await FolderService.getFolderById(id, userId);
+        res.json(folder);
     }
     catch (error) {
         next(error);
     }
 };
-exports.getNoteById = getNoteById;
+exports.getFolderById = getFolderById;
 /**
- * Create a new note
+ * Get folder path (breadcrumb)
  */
-const createNote = async (req, res, next) => {
-    try {
-        if (!req.user?.id) {
-            throw new AppError_1.UnauthorizedError('User not authenticated');
-        }
-        const userId = req.user.id;
-        const note = await NoteService.createNote(userId, req.body);
-        res.status(201).json(note);
-    }
-    catch (error) {
-        next(error);
-    }
-};
-exports.createNote = createNote;
-/**
- * Update an existing note
- */
-const updateNote = async (req, res, next) => {
+const getFolderPath = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
         const { id } = req.params;
-        const note = await NoteService.updateNote(id, userId, req.body);
-        res.json(note);
+        const path = await FolderService.getFolderPath(id, userId);
+        res.json(path);
     }
     catch (error) {
         next(error);
     }
 };
-exports.updateNote = updateNote;
+exports.getFolderPath = getFolderPath;
 /**
- * Delete a note (soft delete - move to trash)
+ * Create a new folder
  */
-const deleteNote = async (req, res, next) => {
+const createFolder = async (req, res, next) => {
+    try {
+        if (!req.user?.id) {
+            throw new AppError_1.UnauthorizedError('User not authenticated');
+        }
+        const userId = req.user.id;
+        const folder = await FolderService.createFolder(userId, req.body);
+        res.status(201).json(folder);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.createFolder = createFolder;
+/**
+ * Update a folder
+ */
+const updateFolder = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
         const { id } = req.params;
-        const result = await NoteService.deleteNote(id, userId);
+        const folder = await FolderService.updateFolder(id, userId, req.body);
+        res.json(folder);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.updateFolder = updateFolder;
+/**
+ * Delete a folder
+ */
+const deleteFolder = async (req, res, next) => {
+    try {
+        if (!req.user?.id) {
+            throw new AppError_1.UnauthorizedError('User not authenticated');
+        }
+        const userId = req.user.id;
+        const { id } = req.params;
+        const result = await FolderService.deleteFolder(id, userId);
         res.json(result);
     }
     catch (error) {
         next(error);
     }
 };
-exports.deleteNote = deleteNote;
+exports.deleteFolder = deleteFolder;
 /**
- * Get all notes in trash
+ * Move a note to a folder
  */
-const getTrash = async (req, res, next) => {
+const moveNoteToFolder = async (req, res, next) => {
     try {
         if (!req.user?.id) {
             throw new AppError_1.UnauthorizedError('User not authenticated');
         }
         const userId = req.user.id;
-        const notes = await NoteService.getTrashNotes(userId);
-        res.json(notes);
-    }
-    catch (error) {
-        next(error);
-    }
-};
-exports.getTrash = getTrash;
-/**
- * Restore a note from trash
- */
-const restoreNote = async (req, res, next) => {
-    try {
-        if (!req.user?.id) {
-            throw new AppError_1.UnauthorizedError('User not authenticated');
-        }
-        const userId = req.user.id;
-        const { id } = req.params;
-        const note = await NoteService.restoreNote(id, userId);
-        res.json(note);
-    }
-    catch (error) {
-        next(error);
-    }
-};
-exports.restoreNote = restoreNote;
-/**
- * Permanently delete a note
- */
-const permanentDelete = async (req, res, next) => {
-    try {
-        if (!req.user?.id) {
-            throw new AppError_1.UnauthorizedError('User not authenticated');
-        }
-        const userId = req.user.id;
-        const { id } = req.params;
-        const result = await NoteService.permanentDeleteNote(id, userId);
+        const { noteId } = req.params;
+        const { folderId } = req.body;
+        const result = await FolderService.moveNoteToFolder(noteId, folderId ?? null, userId);
         res.json(result);
     }
     catch (error) {
         next(error);
     }
 };
-exports.permanentDelete = permanentDelete;
+exports.moveNoteToFolder = moveNoteToFolder;
+/**
+ * Get notes in a folder
+ */
+const getNotesInFolder = async (req, res, next) => {
+    try {
+        if (!req.user?.id) {
+            throw new AppError_1.UnauthorizedError('User not authenticated');
+        }
+        const userId = req.user.id;
+        const { id } = req.params;
+        const noteIds = await FolderService.getNotesInFolder(id === 'unfiled' ? null : id, userId);
+        res.json(noteIds);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getNotesInFolder = getNotesInFolder;

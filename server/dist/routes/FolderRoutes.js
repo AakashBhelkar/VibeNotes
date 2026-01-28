@@ -34,20 +34,20 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const NoteController = __importStar(require("../controllers/NoteController"));
+const FolderController = __importStar(require("../controllers/FolderController"));
 const auth_1 = require("../middleware/auth");
-const validate_1 = require("../middleware/validate");
-const noteValidationSchemas_1 = require("../utils/noteValidationSchemas");
 const router = (0, express_1.Router)();
-// All note routes require authentication
+// All folder routes require authentication
 router.use(auth_1.authenticate);
-router.get('/', NoteController.getAllNotes);
-router.post('/', (0, validate_1.validate)(noteValidationSchemas_1.createNoteSchema), NoteController.createNote);
-// Trash routes (must be before /:id to avoid conflict)
-router.get('/trash', NoteController.getTrash);
-router.post('/:id/restore', NoteController.restoreNote);
-router.delete('/:id/permanent', NoteController.permanentDelete);
-router.get('/:id', NoteController.getNoteById);
-router.put('/:id', (0, validate_1.validate)(noteValidationSchemas_1.updateNoteSchema), NoteController.updateNote);
-router.delete('/:id', NoteController.deleteNote);
+// Folder CRUD
+router.get('/', FolderController.getAllFolders);
+router.get('/tree', FolderController.getFolderTree);
+router.post('/', FolderController.createFolder);
+router.get('/:id', FolderController.getFolderById);
+router.get('/:id/path', FolderController.getFolderPath);
+router.get('/:id/notes', FolderController.getNotesInFolder);
+router.put('/:id', FolderController.updateFolder);
+router.delete('/:id', FolderController.deleteFolder);
+// Move note to folder
+router.put('/notes/:noteId/move', FolderController.moveNoteToFolder);
 exports.default = router;

@@ -34,8 +34,6 @@ class StorageService {
     async uploadFile(userId, noteId, fileName, fileBuffer, mimeType) {
         const uniqueFileName = this.generateFileName(userId, noteId, fileName);
         const filePath = path_1.default.join(this.uploadDir, uniqueFileName);
-        console.log('StorageService: Uploading file to:', filePath);
-        console.log('StorageService: Upload directory:', this.uploadDir);
         try {
             await fs_1.default.promises.writeFile(filePath, fileBuffer);
             // Return the full URL to the file
@@ -46,7 +44,6 @@ class StorageService {
             };
         }
         catch (error) {
-            console.error('StorageService: Write failed:', error);
             const message = error instanceof Error ? error.message : 'Unknown error';
             throw new Error(`Failed to upload file: ${message}`);
         }

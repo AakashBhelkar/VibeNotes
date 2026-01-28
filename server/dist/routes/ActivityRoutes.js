@@ -34,20 +34,28 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const NoteController = __importStar(require("../controllers/NoteController"));
+const ActivityController = __importStar(require("../controllers/ActivityController"));
 const auth_1 = require("../middleware/auth");
-const validate_1 = require("../middleware/validate");
-const noteValidationSchemas_1 = require("../utils/noteValidationSchemas");
 const router = (0, express_1.Router)();
-// All note routes require authentication
+// All routes require authentication
 router.use(auth_1.authenticate);
-router.get('/', NoteController.getAllNotes);
-router.post('/', (0, validate_1.validate)(noteValidationSchemas_1.createNoteSchema), NoteController.createNote);
-// Trash routes (must be before /:id to avoid conflict)
-router.get('/trash', NoteController.getTrash);
-router.post('/:id/restore', NoteController.restoreNote);
-router.delete('/:id/permanent', NoteController.permanentDelete);
-router.get('/:id', NoteController.getNoteById);
-router.put('/:id', (0, validate_1.validate)(noteValidationSchemas_1.updateNoteSchema), NoteController.updateNote);
-router.delete('/:id', NoteController.deleteNote);
+/**
+ * Activity Routes
+ *
+ * GET /api/activities - Get activity feed with pagination
+ * GET /api/activities/recent - Get recent activities (last N days)
+ * GET /api/activities/stats - Get activity statistics
+ * GET /api/activities/note/:noteId - Get activities for a specific note
+ * DELETE /api/activities/cleanup - Clean up old activities
+ */
+// Get activity feed with pagination
+router.get('/', ActivityController.getActivityFeed);
+// Get recent activities
+router.get('/recent', ActivityController.getRecentActivities);
+// Get activity statistics
+router.get('/stats', ActivityController.getActivityStats);
+// Get activities for a specific note
+router.get('/note/:noteId', ActivityController.getNoteActivities);
+// Clean up old activities
+router.delete('/cleanup', ActivityController.cleanupActivities);
 exports.default = router;
