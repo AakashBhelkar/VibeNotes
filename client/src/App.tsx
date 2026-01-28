@@ -1,11 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-import NotesPage from './pages/NotesPage';
-import LandingPage from './pages/LandingPage';
 import { authService } from './services/authService';
 import { analyticsService } from './services/analyticsService';
+import { PageLoader } from './components/PageLoader';
+
+// Lazy load pages for code splitting
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const NotesPage = lazy(() => import('./pages/NotesPage'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return authService.isAuthenticated() ? <>{children}</> : <Navigate to="/login" />;
@@ -25,19 +28,21 @@ function App() {
     return (
         <BrowserRouter>
             <AnalyticsTracker />
-            <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route
-                    path="/notes"
-                    element={
-                        <ProtectedRoute>
-                            <NotesPage />
-                        </ProtectedRoute>
-                    }
-                />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+                <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/signup" element={<SignupPage />} />
+                    <Route
+                        path="/notes"
+                        element={
+                            <ProtectedRoute>
+                                <NotesPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                </Routes>
+            </Suspense>
         </BrowserRouter>
     );
 }
