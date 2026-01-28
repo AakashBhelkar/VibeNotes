@@ -213,7 +213,6 @@ export function AdvancedSearchPanel({
                                 mode="single"
                                 selected={filters.dateFrom || undefined}
                                 onSelect={(date) => updateFilters({ dateFrom: date || null })}
-                                initialFocus
                             />
                         </PopoverContent>
                     </Popover>
@@ -235,7 +234,6 @@ export function AdvancedSearchPanel({
                                 mode="single"
                                 selected={filters.dateTo || undefined}
                                 onSelect={(date) => updateFilters({ dateTo: date || null })}
-                                initialFocus
                             />
                         </PopoverContent>
                     </Popover>

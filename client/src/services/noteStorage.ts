@@ -171,13 +171,6 @@ export const noteStorage = {
     },
 
     /**
-     * @deprecated Use softDelete instead
-     */
-    async delete(id: string): Promise<void> {
-        await this.softDelete(id);
-    },
-
-    /**
      * Search notes by query (excludes deleted notes)
      */
     async search(query: string): Promise<Note[]> {

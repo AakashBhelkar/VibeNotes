@@ -157,18 +157,17 @@ export function ExportMenu({ note, notes, onImport, onError }: ExportMenuProps) 
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem asChild>
-                    <label className="cursor-pointer">
-                        <Upload className="mr-2 h-4 w-4" />
-                        {isImporting ? 'Importing...' : 'Import from JSON'}
-                        <input
-                            type="file"
-                            accept=".json"
-                            onChange={handleImport}
-                            disabled={isImporting}
-                            className="hidden"
-                        />
-                    </label>
+                <DropdownMenuItem onClick={() => document.getElementById('import-json-input')?.click()}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    {isImporting ? 'Importing...' : 'Import from JSON'}
+                    <input
+                        id="import-json-input"
+                        type="file"
+                        accept=".json"
+                        onChange={handleImport}
+                        disabled={isImporting}
+                        className="hidden"
+                    />
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

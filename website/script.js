@@ -60,9 +60,9 @@ window.addEventListener('scroll', () => {
 
 // Track CTA clicks (placeholder for analytics)
 document.querySelectorAll('.btn-primary').forEach(button => {
-    button.addEventListener('click', (e) => {
+    button.addEventListener('click', () => {
         // Analytics tracking would go here
-        console.log('CTA clicked:', e.target.textContent);
+        // TODO: Integrate with Plausible or other analytics service
     });
 });
 
@@ -102,8 +102,6 @@ const createMobileMenu = () => {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('VibeNotes Marketing Site Loaded');
-
     // Add loading animation complete class
     document.body.classList.add('loaded');
 });
@@ -114,7 +112,6 @@ window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
         // Responsive adjustments if needed
-        console.log('Window resized');
     }, 250);
 });
 

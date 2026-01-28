@@ -1,63 +1,129 @@
-import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker } from "react-day-picker"
-
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs"
+import { DateCalendar } from "@mui/x-date-pickers/DateCalendar"
+import dayjs, { Dayjs } from "dayjs"
+import Box from "@mui/material/Box"
 import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>
+export interface CalendarProps {
+    className?: string
+    selected?: Date
+    onSelect?: (date: Date | undefined) => void
+    disabled?: boolean
+    mode?: "single" | "range" | "multiple"
+    showOutsideDays?: boolean
+    month?: Date
+    onMonthChange?: (month: Date) => void
+    fromDate?: Date
+    toDate?: Date
+}
 
+/**
+ * Calendar component using Material UI X DateCalendar
+ * Maintains a similar API to the original react-day-picker based Calendar
+ */
 function Calendar({
-  className,
-  classNames,
-  showOutsideDays = true,
-  ...props
+    className,
+    selected,
+    onSelect,
+    disabled,
+    mode = "single",
+    showOutsideDays = true,
+    month,
+    onMonthChange,
+    fromDate,
+    toDate,
+    ...props
 }: CalendarProps) {
-  return (
-    <DayPicker
-      showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
-      classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
-        nav: "space-x-1 flex items-center",
-        nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
-        ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
-        head_row: "flex",
-        head_cell:
-          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-        day: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
-        ),
-        day_range_end: "day-range-end",
-        day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
-        day_outside:
-          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-        day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_hidden: "invisible",
-        ...classNames,
-      }}
-      components={{
-        IconLeft: () => <ChevronLeft className="h-4 w-4" />,
-        IconRight: () => <ChevronRight className="h-4 w-4" />,
-      }}
-      {...props}
-    />
-  )
+    const selectedDayjs = selected ? dayjs(selected) : null
+    const monthDayjs = month ? dayjs(month) : undefined
+    const minDate = fromDate ? dayjs(fromDate) : undefined
+    const maxDate = toDate ? dayjs(toDate) : undefined
+
+    const handleChange = (newValue: Dayjs | null) => {
+        if (onSelect) {
+            onSelect(newValue ? newValue.toDate() : undefined)
+        }
+    }
+
+    const handleMonthChange = (newMonth: Dayjs) => {
+        if (onMonthChange) {
+            onMonthChange(newMonth.toDate())
+        }
+    }
+
+    return (
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Box className={cn("p-3", className)}>
+                <DateCalendar
+                    value={selectedDayjs}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    showDaysOutsideCurrentMonth={showOutsideDays}
+                    referenceDate={monthDayjs}
+                    onMonthChange={handleMonthChange}
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    sx={{
+                        width: '100%',
+                        maxWidth: '320px',
+                        '& .MuiPickersCalendarHeader-root': {
+                            paddingLeft: '8px',
+                            paddingRight: '8px',
+                            marginTop: 0,
+                        },
+                        '& .MuiPickersCalendarHeader-label': {
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                        },
+                        '& .MuiPickersArrowSwitcher-button': {
+                            opacity: 0.5,
+                            '&:hover': {
+                                opacity: 1,
+                            },
+                        },
+                        '& .MuiDayCalendar-weekDayLabel': {
+                            width: 36,
+                            height: 36,
+                            fontSize: '0.8rem',
+                            color: 'text.secondary',
+                        },
+                        '& .MuiPickersDay-root': {
+                            width: 36,
+                            height: 36,
+                            fontSize: '0.875rem',
+                            '&:hover': {
+                                backgroundColor: 'action.hover',
+                            },
+                            '&.Mui-selected': {
+                                backgroundColor: 'primary.main',
+                                color: 'primary.contrastText',
+                                '&:hover': {
+                                    backgroundColor: 'primary.main',
+                                },
+                                '&:focus': {
+                                    backgroundColor: 'primary.main',
+                                },
+                            },
+                            '&.MuiPickersDay-today': {
+                                backgroundColor: 'action.selected',
+                                borderColor: 'transparent',
+                            },
+                            '&.MuiPickersDay-dayOutsideMonth': {
+                                color: 'text.disabled',
+                                opacity: 0.5,
+                            },
+                        },
+                        '& .MuiPickersDay-dayDisabled': {
+                            color: 'text.disabled',
+                            opacity: 0.5,
+                        },
+                    }}
+                    {...props}
+                />
+            </Box>
+        </LocalizationProvider>
+    )
 }
 Calendar.displayName = "Calendar"
 

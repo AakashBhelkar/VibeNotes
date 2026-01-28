@@ -26,13 +26,6 @@ function calculateBackoffDelay(retryCount: number): number {
 }
 
 /**
- * Sleep for a given number of milliseconds
- */
-function sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
  * Sync failure listeners
  */
 type SyncFailureListener = (noteId: string, error: string, willRetry: boolean) => void;
