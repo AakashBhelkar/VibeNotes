@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
 
 import AuthRoutes from './routes/AuthRoutes';
 import NoteRoutes from './routes/NoteRoutes';
@@ -51,6 +53,13 @@ app.use(generalLimiter);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// API Documentation (Swagger UI)
+const swaggerDocument = YAML.load(path.join(__dirname, 'openapi.yaml'));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'VibeNotes API Documentation',
+}));
 
 // Apply stricter rate limiting to auth routes
 app.use('/auth', authLimiter, AuthRoutes);

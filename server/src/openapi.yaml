@@ -1,0 +1,1488 @@
+openapi: 3.0.3
+info:
+  title: VibeNotes API
+  description: |
+    API documentation for VibeNotes - an offline-first collaborative note-taking application.
+
+    ## Authentication
+    Most endpoints require a JWT token passed in the Authorization header:
+    ```
+    Authorization: Bearer <token>
+    ```
+
+    ## Rate Limiting
+    - Auth endpoints: 10 requests per 15 minutes
+    - General endpoints: 100 requests per minute
+  version: 1.3.1
+  contact:
+    name: VibeNotes Team
+    url: https://github.com/your-username/vibenotes
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.vibenotes.app
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Notes
+    description: Note CRUD operations
+  - name: Folders
+    description: Folder organization
+  - name: Attachments
+    description: File attachments
+  - name: Labels
+    description: Color labels for notes
+  - name: Activities
+    description: Activity feed and tracking
+  - name: Comments
+    description: Note comments
+  - name: Workspaces
+    description: Team workspaces
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Error message"
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "My Note"
+        content:
+          type: string
+          example: "# Hello World\n\nThis is my note content."
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["work", "important"]
+        isPinned:
+          type: boolean
+          default: false
+        isArchived:
+          type: boolean
+          default: false
+        folderId:
+          type: string
+          format: uuid
+          nullable: true
+        version:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    NoteCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        content:
+          type: string
+          default: ""
+        tags:
+          type: array
+          items:
+            type: string
+
+    NoteUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        isPinned:
+          type: boolean
+        isArchived:
+          type: boolean
+        folderId:
+          type: string
+          format: uuid
+          nullable: true
+
+    Folder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Work"
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        color:
+          type: string
+          example: "#3b82f6"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FolderTree:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        color:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/FolderTree'
+
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        noteId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+          example: "screenshot.png"
+        fileSize:
+          type: integer
+          example: 102400
+        mimeType:
+          type: string
+          example: "image/png"
+        url:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+
+    ColorLabel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Important"
+        color:
+          type: string
+          example: "#ef4444"
+        createdAt:
+          type: string
+          format: date-time
+
+    Activity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [note_created, note_updated, note_deleted, note_archived, note_restored]
+        noteId:
+          type: string
+          format: uuid
+        noteTitle:
+          type: string
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        noteId:
+          type: string
+          format: uuid
+        content:
+          type: string
+        author:
+          $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Team Workspace"
+        description:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMember'
+        createdAt:
+          type: string
+          format: date-time
+
+    WorkspaceMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, admin, member, viewer]
+        user:
+          $ref: '#/components/schemas/User'
+
+    StorageUsage:
+      type: object
+      properties:
+        usage:
+          type: object
+          properties:
+            usedBytes:
+              type: integer
+            fileCount:
+              type: integer
+        limit:
+          type: object
+          properties:
+            totalBytes:
+              type: integer
+            totalMB:
+              type: integer
+
+paths:
+  # Authentication
+  /auth/signup:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                displayName:
+                  type: string
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already exists
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '401':
+          description: Invalid credentials
+
+  # Notes
+  /notes:
+    get:
+      tags: [Notes]
+      summary: Get all notes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search query
+        - name: tags
+          in: query
+          schema:
+            type: string
+          description: Comma-separated tags
+        - name: folderId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Note'
+        '401':
+          description: Unauthorized
+
+    post:
+      tags: [Notes]
+      summary: Create a new note
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteCreate'
+      responses:
+        '201':
+          description: Note created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  note:
+                    $ref: '#/components/schemas/Note'
+        '400':
+          description: Validation error
+
+  /notes/trash:
+    get:
+      tags: [Notes]
+      summary: Get trashed notes
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of trashed notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Note'
+
+  /notes/{id}:
+    get:
+      tags: [Notes]
+      summary: Get note by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Note details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  note:
+                    $ref: '#/components/schemas/Note'
+        '404':
+          description: Note not found
+
+    put:
+      tags: [Notes]
+      summary: Update a note
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteUpdate'
+      responses:
+        '200':
+          description: Note updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  note:
+                    $ref: '#/components/schemas/Note'
+
+    delete:
+      tags: [Notes]
+      summary: Soft delete a note (move to trash)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Note moved to trash
+
+  /notes/{id}/restore:
+    post:
+      tags: [Notes]
+      summary: Restore note from trash
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Note restored
+
+  /notes/{id}/permanent:
+    delete:
+      tags: [Notes]
+      summary: Permanently delete a note
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Note permanently deleted
+
+  # Folders
+  /api/folders:
+    get:
+      tags: [Folders]
+      summary: Get all folders
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of folders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  folders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Folder'
+
+    post:
+      tags: [Folders]
+      summary: Create a folder
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                parentId:
+                  type: string
+                  format: uuid
+                color:
+                  type: string
+      responses:
+        '201':
+          description: Folder created
+
+  /api/folders/tree:
+    get:
+      tags: [Folders]
+      summary: Get folder tree structure
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Folder tree
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tree:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FolderTree'
+
+  /api/folders/{id}:
+    get:
+      tags: [Folders]
+      summary: Get folder by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Folder details
+
+    put:
+      tags: [Folders]
+      summary: Update folder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                parentId:
+                  type: string
+                  format: uuid
+                color:
+                  type: string
+      responses:
+        '200':
+          description: Folder updated
+
+    delete:
+      tags: [Folders]
+      summary: Delete folder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Folder deleted
+
+  /api/folders/{id}/notes:
+    get:
+      tags: [Folders]
+      summary: Get notes in folder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notes in folder
+
+  /api/folders/notes/{noteId}/move:
+    put:
+      tags: [Folders]
+      summary: Move note to folder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                folderId:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: Note moved
+
+  # Attachments
+  /api/attachments/upload:
+    post:
+      tags: [Attachments]
+      summary: Upload file attachment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, noteId]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                noteId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  attachment:
+                    $ref: '#/components/schemas/Attachment'
+                  url:
+                    type: string
+        '400':
+          description: Invalid file or missing noteId
+
+  /api/attachments/note/{noteId}:
+    get:
+      tags: [Attachments]
+      summary: Get attachments for a note
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of attachments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attachments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Attachment'
+
+  /api/attachments/{id}:
+    delete:
+      tags: [Attachments]
+      summary: Delete attachment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Attachment deleted
+
+  /api/attachments/storage/usage:
+    get:
+      tags: [Attachments]
+      summary: Get storage usage
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Storage usage info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageUsage'
+
+  # Color Labels
+  /api/color-labels:
+    get:
+      tags: [Labels]
+      summary: Get all color labels
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of labels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  labels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ColorLabel'
+
+    post:
+      tags: [Labels]
+      summary: Create color label
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, color]
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+      responses:
+        '201':
+          description: Label created
+
+  /api/color-labels/{id}:
+    get:
+      tags: [Labels]
+      summary: Get label by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Label details
+
+    put:
+      tags: [Labels]
+      summary: Update label
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+      responses:
+        '200':
+          description: Label updated
+
+    delete:
+      tags: [Labels]
+      summary: Delete label
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Label deleted
+
+  /api/color-labels/notes/{noteId}:
+    get:
+      tags: [Labels]
+      summary: Get labels for a note
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Note labels
+
+    put:
+      tags: [Labels]
+      summary: Update note labels
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                labelIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Labels updated
+
+  # Activities
+  /api/activities:
+    get:
+      tags: [Activities]
+      summary: Get activity feed
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Activity'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+
+  /api/activities/recent:
+    get:
+      tags: [Activities]
+      summary: Get recent activities
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 7
+      responses:
+        '200':
+          description: Recent activities
+
+  /api/activities/stats:
+    get:
+      tags: [Activities]
+      summary: Get activity statistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Activity stats
+
+  /api/activities/note/{noteId}:
+    get:
+      tags: [Activities]
+      summary: Get activities for a note
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Note activities
+
+  # Comments
+  /api/comments:
+    post:
+      tags: [Comments]
+      summary: Create comment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [noteId, content]
+              properties:
+                noteId:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comment:
+                    $ref: '#/components/schemas/Comment'
+
+  /api/comments/note/{noteId}:
+    get:
+      tags: [Comments]
+      summary: Get comments for a note
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Note comments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+
+  /api/comments/note/{noteId}/count:
+    get:
+      tags: [Comments]
+      summary: Get comment count
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Comment count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+
+  /api/comments/{id}:
+    put:
+      tags: [Comments]
+      summary: Update comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Comment updated
+
+    delete:
+      tags: [Comments]
+      summary: Delete comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Comment deleted
+
+  # Workspaces
+  /api/workspaces:
+    get:
+      tags: [Workspaces]
+      summary: Get user's workspaces
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workspaces:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workspace'
+
+    post:
+      tags: [Workspaces]
+      summary: Create workspace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Workspace created
+
+  /api/workspaces/{id}:
+    get:
+      tags: [Workspaces]
+      summary: Get workspace by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workspace details
+
+    put:
+      tags: [Workspaces]
+      summary: Update workspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Workspace updated
+
+    delete:
+      tags: [Workspaces]
+      summary: Delete workspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workspace deleted
+
+  /api/workspaces/{id}/members:
+    post:
+      tags: [Workspaces]
+      summary: Invite member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [admin, member, viewer]
+                  default: member
+      responses:
+        '200':
+          description: Member invited
+
+  /api/workspaces/{id}/members/{memberId}:
+    put:
+      tags: [Workspaces]
+      summary: Update member role
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, member, viewer]
+      responses:
+        '200':
+          description: Role updated
+
+    delete:
+      tags: [Workspaces]
+      summary: Remove member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Member removed
+
+  /api/workspaces/{id}/leave:
+    post:
+      tags: [Workspaces]
+      summary: Leave workspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Left workspace
+
+  /api/workspaces/{id}/notes:
+    get:
+      tags: [Workspaces]
+      summary: Get workspace notes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workspace notes
+
+  /api/workspaces/{id}/role:
+    get:
+      tags: [Workspaces]
+      summary: Get user's role in workspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User's role
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  role:
+                    type: string
+                    enum: [owner, admin, member, viewer]
+
+  # Health Check
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time

@@ -23,6 +23,10 @@ import {
     FolderTree as FolderIcon,
     Menu,
     ChevronLeft,
+    FileText,
+    Archive,
+    Star,
+    Tag,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
@@ -49,29 +53,50 @@ import { useNotesPageState } from '@/hooks/useNotesPageState';
 
 // MUI imports
 import {
-    AppBar,
-    Toolbar,
     IconButton,
     Typography,
     Drawer,
     Box,
     Divider,
-    Chip,
+    Avatar,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Badge,
+    InputAdornment,
+    TextField,
+    Paper,
     Tooltip,
     useMediaQuery,
     useTheme,
+    Snackbar,
+    Alert,
 } from '@mui/material';
 
-const DRAWER_WIDTH = 320;
+const SIDEBAR_WIDTH = 240;
+const SIDEBAR_COLLAPSED_WIDTH = 72;
+
+interface NavItem {
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+    onClick?: () => void;
+    badge?: number;
+}
 
 /**
- * Main Notes page with list and editor
- * Provides full note management interface with offline support
+ * Main Notes page with Pabbly-style UI
  */
 export default function NotesPage() {
     const navigate = useNavigate();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+    // Sidebar state
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [activeNavItem, setActiveNavItem] = useState('notes');
 
     // Consolidated state management
     const { state: pageState, actions: pageActions } = useNotesPageState();
@@ -88,6 +113,9 @@ export default function NotesPage() {
     const collaboration = useCollaboration(selectedNote?.id || null);
     const { isOnline, isSyncing, sync } = useSyncStatus();
 
+    // Search state
+    const [searchQuery, setSearchQuery] = useState('');
+
     // Extract all unique tags from notes
     const allTags = useMemo(() => {
         const tagSet = new Set<string>();
@@ -102,6 +130,29 @@ export default function NotesPage() {
         // Filters are handled internally by AdvancedSearchPanel
     };
 
+    // Get user info
+    const user = useMemo(() => {
+        try {
+            return JSON.parse(localStorage.getItem('user') || '{}');
+        } catch {
+            return {};
+        }
+    }, []);
+
+    // Navigation items
+    const navItems: NavItem[] = [
+        { id: 'notes', label: 'All Notes', icon: <FileText className="h-5 w-5" />, onClick: () => { setActiveNavItem('notes'); if (showArchived) toggleArchived(); } },
+        { id: 'starred', label: 'Starred', icon: <Star className="h-5 w-5" />, onClick: () => setActiveNavItem('starred') },
+        { id: 'archive', label: 'Archive', icon: <Archive className="h-5 w-5" />, onClick: () => { setActiveNavItem('archive'); if (!showArchived) { toggleArchived(); fetchArchivedNotes(); } } },
+        { id: 'tags', label: 'Tags', icon: <Tag className="h-5 w-5" />, badge: allTags.length, onClick: () => setActiveNavItem('tags') },
+    ];
+
+    const toolItems: NavItem[] = [
+        { id: 'graph', label: 'Graph View', icon: <Network className="h-5 w-5" />, onClick: () => modals.openModal('graphView') },
+        { id: 'activity', label: 'Activity', icon: <Activity className="h-5 w-5" />, onClick: () => modals.openModal('activityFeed') },
+        { id: 'workspaces', label: 'Workspaces', icon: <Users className="h-5 w-5" />, onClick: () => modals.openModal('workspaces') },
+    ];
+
     // Check if this is the user's first visit
     useEffect(() => {
         if (onboardingService.isFirstVisit()) {
@@ -112,17 +163,14 @@ export default function NotesPage() {
     // Global keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Ctrl/Cmd + ? to show keyboard shortcuts
             if ((e.ctrlKey || e.metaKey) && e.key === '?') {
                 e.preventDefault();
                 modals.openModal('keyboardShortcuts');
             }
-            // Ctrl/Cmd + Shift + F to toggle distraction-free mode
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
                 e.preventDefault();
                 toggleDistractionFree();
             }
-            // Escape to exit distraction-free mode
             if (e.key === 'Escape' && distractionFreeMode) {
                 exitDistractionFree();
             }
@@ -131,6 +179,16 @@ export default function NotesPage() {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [distractionFreeMode, modals, toggleDistractionFree, exitDistractionFree]);
+
+    // Handle search
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+        if (query.trim()) {
+            searchNotes(query);
+        } else {
+            refresh();
+        }
+    };
 
     const handleCreateNote = async (): Promise<void> => {
         try {
@@ -269,7 +327,6 @@ export default function NotesPage() {
     const handleCreateSampleNotes = async (): Promise<void> => {
         try {
             if (!onboardingService.hasSampleNotes()) {
-                // Create sample notes
                 for (const sampleNote of sampleNotes) {
                     await createNote(sampleNote.title, sampleNote.content, sampleNote.tags);
                 }
@@ -304,336 +361,471 @@ export default function NotesPage() {
         }
     };
 
-
-    // Sidebar content (reusable for both drawer modes)
-    const sidebarContent = (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* Folder Tree Toggle */}
-            <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleFolders}
-                    className="w-full justify-start"
+    // Sidebar component
+    const renderSidebar = () => (
+        <Box
+            sx={{
+                width: sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
+                height: '100vh',
+                bgcolor: '#1a1a2e',
+                color: 'white',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'width 0.2s ease',
+                overflow: 'hidden',
+            }}
+        >
+            {/* Logo Section */}
+            <Box
+                sx={{
+                    p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    minHeight: 64,
+                }}
+            >
+                <Box
+                    sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 2,
+                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                    }}
                 >
-                    <FolderIcon className="h-4 w-4 mr-2" />
-                    {showFolders ? 'Hide Folders' : 'Show Folders'}
-                </Button>
+                    <FileText className="h-5 w-5 text-white" />
+                </Box>
+                {!sidebarCollapsed && (
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
+                        VibeNotes
+                    </Typography>
+                )}
             </Box>
 
-            {/* Folder Tree */}
-            {showFolders && (
-                <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider', maxHeight: 192, overflowY: 'auto' }}>
-                    <FolderTree
-                        selectedFolderId={selectedFolderId}
-                        onSelectFolder={selectFolder}
-                        onError={setError}
-                    />
-                </Box>
-            )}
+            {/* Navigation */}
+            <Box sx={{ flex: 1, py: 2, overflow: 'auto' }}>
+                <List sx={{ px: 1 }}>
+                    {navItems.map((item) => (
+                        <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
+                            <ListItemButton
+                                onClick={item.onClick}
+                                selected={activeNavItem === item.id}
+                                sx={{
+                                    borderRadius: 2,
+                                    px: sidebarCollapsed ? 1.5 : 2,
+                                    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                    '&.Mui-selected': {
+                                        bgcolor: 'rgba(99, 102, 241, 0.2)',
+                                        '&:hover': {
+                                            bgcolor: 'rgba(99, 102, 241, 0.3)',
+                                        },
+                                    },
+                                    '&:hover': {
+                                        bgcolor: 'rgba(255,255,255,0.05)',
+                                    },
+                                }}
+                            >
+                                <ListItemIcon sx={{ color: activeNavItem === item.id ? '#6366f1' : 'rgba(255,255,255,0.7)', minWidth: sidebarCollapsed ? 0 : 40 }}>
+                                    {item.badge ? (
+                                        <Badge badgeContent={item.badge} color="primary" max={99}>
+                                            {item.icon}
+                                        </Badge>
+                                    ) : item.icon}
+                                </ListItemIcon>
+                                {!sidebarCollapsed && (
+                                    <ListItemText
+                                        primary={item.label}
+                                        sx={{
+                                            '& .MuiTypography-root': {
+                                                fontSize: '0.9rem',
+                                                color: activeNavItem === item.id ? 'white' : 'rgba(255,255,255,0.7)',
+                                            }
+                                        }}
+                                    />
+                                )}
+                            </ListItemButton>
+                        </ListItem>
+                    ))}
+                </List>
 
-            {/* Note List */}
-            <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                <NoteList
-                    notes={showArchived ? archivedNotes : notes}
-                    selectedNote={selectedNote}
-                    onSelectNote={(note) => {
-                        selectNote(note);
-                        if (isMobile) setDrawerOpen(false);
+                <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
+
+                {/* Tools Section */}
+                {!sidebarCollapsed && (
+                    <Typography variant="caption" sx={{ px: 3, color: 'rgba(255,255,255,0.5)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Tools
+                    </Typography>
+                )}
+                <List sx={{ px: 1, mt: 1 }}>
+                    {toolItems.map((item) => (
+                        <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
+                            <ListItemButton
+                                onClick={item.onClick}
+                                sx={{
+                                    borderRadius: 2,
+                                    px: sidebarCollapsed ? 1.5 : 2,
+                                    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(255,255,255,0.05)',
+                                    },
+                                }}
+                            >
+                                <ListItemIcon sx={{ color: 'rgba(255,255,255,0.7)', minWidth: sidebarCollapsed ? 0 : 40 }}>
+                                    {item.icon}
+                                </ListItemIcon>
+                                {!sidebarCollapsed && (
+                                    <ListItemText
+                                        primary={item.label}
+                                        sx={{ '& .MuiTypography-root': { fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' } }}
+                                    />
+                                )}
+                            </ListItemButton>
+                        </ListItem>
+                    ))}
+                </List>
+            </Box>
+
+            {/* Collapse Button */}
+            <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <ListItemButton
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    sx={{
+                        borderRadius: 2,
+                        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
                     }}
-                    onCreateNote={handleCreateNote}
-                    onDeleteNote={handleDeleteNote}
-                    onTogglePin={handleTogglePin}
-                    onToggleArchive={handleToggleArchive}
-                    onSearch={searchNotes}
-                    showArchived={showArchived}
-                    onToggleShowArchived={handleToggleShowArchived}
-                    templateSelector={
-                        <TemplateSelector
-                            onSelectTemplate={handleSelectTemplate}
-                            onCreateDailyNote={handleCreateDailyNote}
+                >
+                    <ListItemIcon sx={{ color: 'rgba(255,255,255,0.7)', minWidth: sidebarCollapsed ? 0 : 40 }}>
+                        <ChevronLeft className={`h-5 w-5 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} />
+                    </ListItemIcon>
+                    {!sidebarCollapsed && (
+                        <ListItemText
+                            primary="Collapse"
+                            sx={{ '& .MuiTypography-root': { fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' } }}
                         />
-                    }
-                />
+                    )}
+                </ListItemButton>
             </Box>
         </Box>
     );
 
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-            {/* MUI AppBar - Hidden in distraction-free mode */}
-            {!distractionFreeMode && (
-                <AppBar
-                    position="static"
-                    color="default"
-                    elevation={0}
+    if (distractionFreeMode) {
+        return (
+            <Box sx={{ height: '100vh', position: 'relative' }}>
+                <Box
                     sx={{
-                        borderBottom: 1,
-                        borderColor: 'divider',
-                        bgcolor: 'background.paper',
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        fontSize: '0.75rem',
+                        color: 'text.secondary',
+                        opacity: 0.5,
+                        transition: 'opacity 0.2s',
+                        zIndex: 10,
+                        '&:hover': { opacity: 1 },
                     }}
                 >
-                    <Toolbar variant="dense" sx={{ gap: 1 }}>
-                        {/* Mobile menu button */}
-                        {isMobile && (
-                            <IconButton
-                                edge="start"
-                                color="inherit"
-                                aria-label="menu"
-                                onClick={() => setDrawerOpen(!drawerOpen)}
-                                sx={{ mr: 1 }}
-                            >
-                                <Menu className="h-5 w-5" />
-                            </IconButton>
-                        )}
+                    Press Esc to exit
+                </Box>
+                <NoteEditor
+                    note={selectedNote}
+                    onSave={handleSaveNote}
+                    onError={setError}
+                />
+            </Box>
+        );
+    }
 
-                        {/* Logo / Title */}
-                        <Typography
-                            variant="h6"
-                            component="h1"
+    return (
+        <Box sx={{ display: 'flex', height: '100vh', bgcolor: '#f5f5f5' }}>
+            {/* Sidebar */}
+            {!isMobile && renderSidebar()}
+
+            {/* Mobile Drawer */}
+            {isMobile && (
+                <Drawer
+                    open={drawerOpen}
+                    onClose={() => setDrawerOpen(false)}
+                    sx={{
+                        '& .MuiDrawer-paper': {
+                            width: SIDEBAR_WIDTH,
+                            bgcolor: '#1a1a2e',
+                        },
+                    }}
+                >
+                    {renderSidebar()}
+                </Drawer>
+            )}
+
+            {/* Main Content */}
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {/* Top Bar */}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        px: 3,
+                        py: 1.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'white',
+                    }}
+                >
+                    {/* Mobile Menu */}
+                    {isMobile && (
+                        <IconButton onClick={() => setDrawerOpen(true)}>
+                            <Menu className="h-5 w-5" />
+                        </IconButton>
+                    )}
+
+                    {/* Search */}
+                    <TextField
+                        placeholder="Search notes..."
+                        size="small"
+                        value={searchQuery}
+                        onChange={(e) => handleSearch(e.target.value)}
+                        sx={{
+                            width: 300,
+                            '& .MuiOutlinedInput-root': {
+                                bgcolor: '#f5f5f5',
+                                borderRadius: 2,
+                                '& fieldset': { border: 'none' },
+                            },
+                        }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Search className="h-4 w-4 text-gray-400" />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+
+                    {/* Spacer */}
+                    <Box sx={{ flex: 1 }} />
+
+                    {/* Status */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {isOnline ? (
+                            <Cloud className="h-4 w-4 text-green-500" />
+                        ) : (
+                            <CloudOff className="h-4 w-4 text-gray-400" />
+                        )}
+                        <Typography variant="caption" color="text.secondary">
+                            {isOnline ? 'Online' : 'Offline'}
+                        </Typography>
+                    </Box>
+
+                    {/* Actions */}
+                    <Tooltip title="Sync">
+                        <span>
+                            <IconButton onClick={handleSync} disabled={!isOnline || isSyncing} size="small">
+                                <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <ExportMenu
+                        note={selectedNote}
+                        notes={notes}
+                        onImport={handleImport}
+                        onError={setError}
+                    />
+
+                    <Tooltip title="Keyboard Shortcuts">
+                        <IconButton onClick={() => modals.openModal('keyboardShortcuts')} size="small">
+                            <Keyboard className="h-4 w-4" />
+                        </IconButton>
+                    </Tooltip>
+
+                    <ModeToggle />
+
+                    <Divider orientation="vertical" flexItem />
+
+                    {/* User Avatar */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar
                             sx={{
-                                fontWeight: 700,
-                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                                backgroundClip: 'text',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                mr: 2,
+                                width: 32,
+                                height: 32,
+                                bgcolor: '#6366f1',
+                                fontSize: '0.875rem',
                             }}
                         >
-                            VibeNotes
-                        </Typography>
-
-                        {/* Status Chip */}
-                        <Chip
-                            icon={isOnline ? <Cloud className="h-3 w-3" /> : <CloudOff className="h-3 w-3" />}
-                            label={isOnline ? 'Online' : 'Offline'}
-                            size="small"
-                            color={isOnline ? 'success' : 'default'}
-                            variant="outlined"
-                            sx={{ mr: 1 }}
-                        />
-
-                        {/* Error Message */}
-                        {errorMessage && (
-                            <Chip
-                                label={errorMessage}
-                                size="small"
-                                color="error"
-                                onDelete={() => setError(null)}
-                                sx={{ mr: 1 }}
-                            />
+                            {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+                        </Avatar>
+                        {!isMobile && (
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {user.displayName || user.email || 'User'}
+                            </Typography>
                         )}
-
-                        {/* Spacer */}
-                        <Box sx={{ flexGrow: 1 }} />
-
-                        {/* Action Group 1: Sync */}
-                        <Tooltip title="Sync notes">
-                            <span>
-                                <IconButton
-                                    onClick={handleSync}
-                                    disabled={!isOnline || isSyncing}
-                                    size="small"
-                                >
-                                    <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-
-                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-                        {/* Action Group 2: Content */}
-                        <ExportMenu
-                            note={selectedNote}
-                            notes={notes}
-                            onImport={handleImport}
-                            onError={setError}
-                        />
-
-                        <Tooltip title="Graph View">
-                            <IconButton
-                                onClick={() => modals.openModal('graphView')}
-                                size="small"
-                            >
-                                <Network className="h-4 w-4" />
-                            </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Advanced Search">
-                            <IconButton
-                                onClick={() => modals.openModal('advancedSearch')}
-                                size="small"
-                            >
-                                <Search className="h-4 w-4" />
-                            </IconButton>
-                        </Tooltip>
-
-                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-                        {/* Action Group 3: Collaboration */}
-                        <Tooltip title="Activity Feed">
-                            <IconButton
-                                onClick={() => modals.openModal('activityFeed')}
-                                size="small"
-                            >
-                                <Activity className="h-4 w-4" />
-                            </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Workspaces">
-                            <IconButton
-                                onClick={() => modals.openModal('workspaces')}
-                                size="small"
-                            >
-                                <Users className="h-4 w-4" />
-                            </IconButton>
-                        </Tooltip>
-
-                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-                        {/* Action Group 4: Settings */}
-                        <Tooltip title="Keyboard Shortcuts (Ctrl+?)">
-                            <IconButton
-                                onClick={() => modals.openModal('keyboardShortcuts')}
-                                size="small"
-                            >
-                                <Keyboard className="h-4 w-4" />
-                            </IconButton>
-                        </Tooltip>
-
-                        <ModeToggle />
-
                         <Tooltip title="Logout">
                             <IconButton onClick={handleLogout} size="small">
                                 <LogOut className="h-4 w-4" />
                             </IconButton>
                         </Tooltip>
-                    </Toolbar>
-                </AppBar>
-            )}
+                    </Box>
+                </Paper>
 
-            {/* Main Content Area */}
-            <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* Drawer / Sidebar - Hidden in distraction-free mode */}
-                {!distractionFreeMode && (
-                    <Drawer
-                        variant={isMobile ? 'temporary' : 'persistent'}
-                        open={isMobile ? drawerOpen : true}
-                        onClose={() => setDrawerOpen(false)}
+                {/* Content Area */}
+                <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                    {/* Notes List Panel */}
+                    <Paper
+                        elevation={0}
                         sx={{
-                            width: DRAWER_WIDTH,
-                            flexShrink: 0,
-                            '& .MuiDrawer-paper': {
-                                width: DRAWER_WIDTH,
-                                boxSizing: 'border-box',
-                                position: isMobile ? 'fixed' : 'relative',
-                                height: isMobile ? '100%' : 'auto',
-                            },
+                            width: 320,
+                            borderRight: '1px solid',
+                            borderColor: 'divider',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            bgcolor: 'white',
                         }}
                     >
-                        {/* Close button for mobile */}
-                        {isMobile && (
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
-                                <IconButton onClick={() => setDrawerOpen(false)} size="small">
-                                    <ChevronLeft className="h-5 w-5" />
-                                </IconButton>
+                        {/* Panel Header */}
+                        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                    {showArchived ? 'Archived Notes' : 'All Notes'}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {(showArchived ? archivedNotes : notes).length} notes
+                                </Typography>
+                            </Box>
+
+                            {/* Quick Actions */}
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Button
+                                    onClick={handleCreateNote}
+                                    className="flex-1"
+                                    size="sm"
+                                >
+                                    New Note
+                                </Button>
+                                <TemplateSelector
+                                    onSelectTemplate={handleSelectTemplate}
+                                    onCreateDailyNote={handleCreateDailyNote}
+                                />
+                            </Box>
+                        </Box>
+
+                        {/* Folder Toggle */}
+                        <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={toggleFolders}
+                                className="w-full justify-start"
+                            >
+                                <FolderIcon className="h-4 w-4 mr-2" />
+                                {showFolders ? 'Hide Folders' : 'Show Folders'}
+                            </Button>
+                        </Box>
+
+                        {/* Folder Tree */}
+                        {showFolders && (
+                            <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', maxHeight: 150, overflowY: 'auto' }}>
+                                <FolderTree
+                                    selectedFolderId={selectedFolderId}
+                                    onSelectFolder={selectFolder}
+                                    onError={setError}
+                                />
                             </Box>
                         )}
-                        {sidebarContent}
-                    </Drawer>
-                )}
 
-                {/* Note Editor */}
-                <Box
-                    component="main"
-                    sx={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden',
-                        borderRight: distractionFreeMode ? 'none' : 1,
-                        borderColor: 'divider',
-                    }}
-                >
-                    {/* Editor toolbar - Hidden in distraction-free mode */}
-                    {!distractionFreeMode && selectedNote && (
-                        <Toolbar
-                            variant="dense"
-                            sx={{
-                                borderBottom: 1,
-                                borderColor: 'divider',
-                                gap: 1,
-                                minHeight: 48,
-                            }}
-                        >
-                            <ColorLabelPicker
-                                noteId={selectedNote.id}
-                                onError={setError}
+                        {/* Notes List */}
+                        <Box sx={{ flex: 1, overflow: 'auto' }}>
+                            <NoteList
+                                notes={showArchived ? archivedNotes : notes}
+                                selectedNote={selectedNote}
+                                onSelectNote={selectNote}
+                                onCreateNote={handleCreateNote}
+                                onDeleteNote={handleDeleteNote}
+                                onTogglePin={handleTogglePin}
+                                onToggleArchive={handleToggleArchive}
+                                onSearch={searchNotes}
+                                showArchived={showArchived}
+                                onToggleShowArchived={handleToggleShowArchived}
                             />
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                    modals.openModal('versionHistory');
-                                    analyticsService.trackVersionHistoryViewed();
+                        </Box>
+                    </Paper>
+
+                    {/* Editor Panel */}
+                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
+                        {/* Editor Toolbar */}
+                        {selectedNote && (
+                            <Box
+                                sx={{
+                                    px: 2,
+                                    py: 1,
+                                    borderBottom: '1px solid',
+                                    borderColor: 'divider',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
                                 }}
                             >
-                                <Clock className="h-4 w-4 mr-2" />
-                                History
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => modals.isOpen('comments') ? modals.closeModal() : modals.openModal('comments')}
-                            >
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                Comments
-                            </Button>
-                            <Box sx={{ flexGrow: 1 }} />
-                            <CollaborationStatus
-                                isConnected={collaboration.isConnected}
-                                isCollaborating={collaboration.isCollaborating}
-                                collaborators={collaboration.collaborators}
-                                error={collaboration.error}
-                                isOffline={collaboration.isOffline}
-                            />
-                        </Toolbar>
-                    )}
-                    {/* Distraction-free mode exit hint */}
-                    {distractionFreeMode && (
-                        <Box
-                            sx={{
-                                position: 'absolute',
-                                top: 8,
-                                right: 8,
-                                fontSize: '0.75rem',
-                                color: 'text.secondary',
-                                opacity: 0.5,
-                                transition: 'opacity 0.2s',
-                                zIndex: 10,
-                                '&:hover': { opacity: 1 },
-                            }}
-                        >
-                            Press Esc to exit
-                        </Box>
-                    )}
-                    <NoteEditor
-                        note={selectedNote}
-                        onSave={handleSaveNote}
-                        onError={setError}
-                    />
-                </Box>
+                                <ColorLabelPicker
+                                    noteId={selectedNote.id}
+                                    onError={setError}
+                                />
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        modals.openModal('versionHistory');
+                                        analyticsService.trackVersionHistoryViewed();
+                                    }}
+                                >
+                                    <Clock className="h-4 w-4 mr-2" />
+                                    History
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => modals.isOpen('comments') ? modals.closeModal() : modals.openModal('comments')}
+                                >
+                                    <MessageSquare className="h-4 w-4 mr-2" />
+                                    Comments
+                                </Button>
+                                <Box sx={{ flex: 1 }} />
+                                <CollaborationStatus
+                                    isConnected={collaboration.isConnected}
+                                    isCollaborating={collaboration.isCollaborating}
+                                    collaborators={collaboration.collaborators}
+                                    error={collaboration.error}
+                                    isOffline={collaboration.isOffline}
+                                />
+                            </Box>
+                        )}
 
-                {/* Right Sidebar - Attachments - Hidden in distraction-free mode and on mobile */}
-                {!distractionFreeMode && (
-                    <Box
+                        {/* Note Editor */}
+                        <Box sx={{ flex: 1, overflow: 'auto' }}>
+                            <NoteEditor
+                                note={selectedNote}
+                                onSave={handleSaveNote}
+                                onError={setError}
+                            />
+                        </Box>
+                    </Box>
+
+                    {/* Right Sidebar - Attachments (Desktop only) */}
+                    <Paper
+                        elevation={0}
                         sx={{
-                            display: { xs: 'none', lg: 'block' },
-                            width: DRAWER_WIDTH,
-                            flexShrink: 0,
-                            overflowY: 'auto',
+                            width: 280,
+                            borderLeft: '1px solid',
+                            borderColor: 'divider',
                             p: 2,
-                            bgcolor: 'action.hover',
+                            overflow: 'auto',
+                            display: { xs: 'none', lg: 'block' },
+                            bgcolor: '#fafafa',
                         }}
                     >
                         <StorageQuotaDisplay />
@@ -643,11 +835,11 @@ export default function NotesPage() {
                                 onError={setError}
                             />
                         )}
-                    </Box>
-                )}
+                    </Paper>
+                </Box>
             </Box>
 
-            {/* Version History Modal */}
+            {/* Modals */}
             {modals.isOpen('versionHistory') && selectedNote && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-background rounded-lg shadow-lg w-full h-full sm:w-[90vw] sm:h-[80vh] max-w-6xl overflow-hidden">
@@ -660,7 +852,6 @@ export default function NotesPage() {
                 </div>
             )}
 
-            {/* Welcome Modal for First-Time Users */}
             <WelcomeModal
                 open={modals.isOpen('welcome')}
                 onClose={() => {
@@ -670,13 +861,11 @@ export default function NotesPage() {
                 onCreateSampleNotes={handleCreateSampleNotes}
             />
 
-            {/* Keyboard Shortcuts Panel */}
             <KeyboardShortcutsPanel
                 isOpen={modals.isOpen('keyboardShortcuts')}
                 onClose={() => modals.closeModal()}
             />
 
-            {/* Graph View Modal */}
             {modals.isOpen('graphView') && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-background rounded-lg shadow-lg w-full h-full sm:w-[90vw] sm:h-[80vh] max-w-6xl flex flex-col overflow-hidden">
@@ -693,7 +882,6 @@ export default function NotesPage() {
                 </div>
             )}
 
-            {/* Advanced Search Panel */}
             {modals.isOpen('advancedSearch') && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-background rounded-lg shadow-lg w-full sm:w-[90vw] max-w-2xl max-h-full sm:max-h-[80vh] overflow-y-auto">
@@ -707,7 +895,6 @@ export default function NotesPage() {
                 </div>
             )}
 
-            {/* Activity Feed Panel */}
             {modals.isOpen('activityFeed') && (
                 <ActivityFeed
                     onClose={() => modals.closeModal()}
@@ -719,7 +906,6 @@ export default function NotesPage() {
                 />
             )}
 
-            {/* Comments Panel */}
             {modals.isOpen('comments') && selectedNote && (
                 <CommentThread
                     noteId={selectedNote.id}
@@ -727,10 +913,21 @@ export default function NotesPage() {
                 />
             )}
 
-            {/* Workspace Manager Modal */}
             {modals.isOpen('workspaces') && (
                 <WorkspaceManager onClose={() => modals.closeModal()} />
             )}
+
+            {/* Error Snackbar */}
+            <Snackbar
+                open={!!errorMessage}
+                autoHideDuration={6000}
+                onClose={() => setError(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setError(null)} severity="error" sx={{ width: '100%' }}>
+                    {errorMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }
