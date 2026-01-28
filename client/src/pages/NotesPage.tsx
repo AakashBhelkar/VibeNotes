@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { ExportMenu } from '@/components/ExportMenu';
@@ -42,6 +42,8 @@ import { CommentThread } from '@/components/CommentThread';
 import { WorkspaceManager } from '@/components/WorkspaceManager';
 import { CollaborationStatus } from '@/components/CollaboratorCursors';
 import { useCollaboration } from '@/hooks/useCollaboration';
+import { useModalManager } from '@/hooks/useModalManager';
+import { useNotesPageState } from '@/hooks/useNotesPageState';
 
 /**
  * Main Notes page with list and editor
@@ -49,20 +51,14 @@ import { useCollaboration } from '@/hooks/useCollaboration';
  */
 export default function NotesPage() {
     const navigate = useNavigate();
-    const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [showWelcome, setShowWelcome] = useState(false);
-    const [showVersionHistory, setShowVersionHistory] = useState(false);
-    const [showArchived, setShowArchived] = useState(false);
-    const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
-    const [distractionFreeMode, setDistractionFreeMode] = useState(false);
-    const [showGraphView, setShowGraphView] = useState(false);
-    const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
-    const [showActivityFeed, setShowActivityFeed] = useState(false);
-    const [showComments, setShowComments] = useState(false);
-    const [showWorkspaces, setShowWorkspaces] = useState(false);
-    const [showFolders, setShowFolders] = useState(true);
-    const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+    // Consolidated state management
+    const { state: pageState, actions: pageActions } = useNotesPageState();
+    const { selectedNote, selectedFolderId, errorMessage, showArchived, showFolders, distractionFreeMode } = pageState;
+    const { selectNote, selectFolder, setError, toggleArchived, toggleFolders, toggleDistractionFree, exitDistractionFree, clearSelection } = pageActions;
+
+    // Modal management
+    const modals = useModalManager();
 
     const { notes, createNote, updateNote, deleteNote, searchNotes, refresh, fetchArchivedNotes, archivedNotes } = useNotes();
     const collaboration = useCollaboration(selectedNote?.id || null);
@@ -77,15 +73,17 @@ export default function NotesPage() {
         return Array.from(tagSet).sort();
     }, [notes]);
 
-    // Search filters state for advanced search (used by AdvancedSearchPanel)
-    const [_searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
+    // Search filters handler for advanced search
+    const handleSearchFiltersChange = (_filters: SearchFilters | null) => {
+        // Filters are handled internally by AdvancedSearchPanel
+    };
 
     // Check if this is the user's first visit
     useEffect(() => {
         if (onboardingService.isFirstVisit()) {
-            setShowWelcome(true);
+            modals.openModal('welcome');
         }
-    }, []);
+    }, [modals]);
 
     // Global keyboard shortcuts
     useEffect(() => {
@@ -93,32 +91,32 @@ export default function NotesPage() {
             // Ctrl/Cmd + ? to show keyboard shortcuts
             if ((e.ctrlKey || e.metaKey) && e.key === '?') {
                 e.preventDefault();
-                setShowKeyboardShortcuts(true);
+                modals.openModal('keyboardShortcuts');
             }
             // Ctrl/Cmd + Shift + F to toggle distraction-free mode
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
                 e.preventDefault();
-                setDistractionFreeMode(prev => !prev);
+                toggleDistractionFree();
             }
             // Escape to exit distraction-free mode
             if (e.key === 'Escape' && distractionFreeMode) {
-                setDistractionFreeMode(false);
+                exitDistractionFree();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [distractionFreeMode]);
+    }, [distractionFreeMode, modals, toggleDistractionFree, exitDistractionFree]);
 
     const handleCreateNote = async (): Promise<void> => {
         try {
             const newNote = await createNote('Untitled', '');
-            setSelectedNote(newNote);
-            setErrorMessage(null);
+            selectNote(newNote);
+            setError(null);
             analyticsService.trackNoteCreated();
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to create note';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -126,12 +124,12 @@ export default function NotesPage() {
         try {
             await deleteNote(id);
             if (selectedNote?.id === id) {
-                setSelectedNote(null);
+                clearSelection();
             }
-            setErrorMessage(null);
+            setError(null);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to delete note';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -139,10 +137,10 @@ export default function NotesPage() {
         try {
             await updateNote(id, { isPinned });
             refresh();
-            setErrorMessage(null);
+            setError(null);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to pin note';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -150,22 +148,21 @@ export default function NotesPage() {
         try {
             await updateNote(id, { isArchived });
             if (selectedNote?.id === id) {
-                setSelectedNote(null);
+                clearSelection();
             }
             refresh();
             if (showArchived) {
                 fetchArchivedNotes();
             }
-            setErrorMessage(null);
+            setError(null);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to archive note';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
     const handleToggleShowArchived = (): void => {
-        setShowArchived(prev => !prev);
-        setSelectedNote(null);
+        toggleArchived();
         if (!showArchived) {
             fetchArchivedNotes();
         } else {
@@ -176,10 +173,10 @@ export default function NotesPage() {
     const handleSaveNote = async (id: string, updates: Partial<Note>): Promise<void> => {
         try {
             await updateNote(id, updates);
-            setErrorMessage(null);
+            setError(null);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to save note';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -191,10 +188,10 @@ export default function NotesPage() {
     const handleSync = async (): Promise<void> => {
         try {
             await sync();
-            setErrorMessage(null);
+            setError(null);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to sync';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -204,10 +201,10 @@ export default function NotesPage() {
                 await createNote(note.title || 'Untitled', note.content || '', note.tags);
             }
             refresh();
-            setErrorMessage(null);
+            setError(null);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to import notes';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -219,12 +216,12 @@ export default function NotesPage() {
                 noteData.content || '',
                 noteData.tags
             );
-            setSelectedNote(newNote);
-            setErrorMessage(null);
+            selectNote(newNote);
+            setError(null);
             analyticsService.trackTemplateUsed(template.name, template.id.startsWith('custom-'));
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to create note from template';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -236,12 +233,12 @@ export default function NotesPage() {
                 dailyNoteData.content || '',
                 dailyNoteData.tags
             );
-            setSelectedNote(newNote);
-            setErrorMessage(null);
+            selectNote(newNote);
+            setError(null);
             analyticsService.trackDailyNoteCreated();
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to create daily note';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -257,10 +254,10 @@ export default function NotesPage() {
             }
             onboardingService.completeOnboarding();
             analyticsService.trackOnboardingCompleted(!onboardingService.hasSampleNotes());
-            setErrorMessage(null);
+            setError(null);
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to create sample notes';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -273,13 +270,13 @@ export default function NotesPage() {
                     tags: version.tags,
                 });
                 refresh();
-                setShowVersionHistory(false);
+                modals.closeModal();
                 analyticsService.trackVersionRestored();
-                setErrorMessage(null);
+                setError(null);
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to restore version';
-            setErrorMessage(message);
+            setError(message);
         }
     };
 
@@ -325,14 +322,14 @@ export default function NotesPage() {
                         note={selectedNote}
                         notes={notes}
                         onImport={handleImport}
-                        onError={setErrorMessage}
+                        onError={setError}
                     />
 
                     {/* Graph View */}
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowGraphView(true)}
+                        onClick={() => modals.openModal('graphView')}
                         aria-label="Graph view"
                         title="Graph View"
                     >
@@ -343,7 +340,7 @@ export default function NotesPage() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowAdvancedSearch(true)}
+                        onClick={() => modals.openModal('advancedSearch')}
                         aria-label="Advanced search"
                         title="Advanced Search"
                     >
@@ -354,7 +351,7 @@ export default function NotesPage() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowActivityFeed(true)}
+                        onClick={() => modals.openModal('activityFeed')}
                         aria-label="Activity feed"
                         title="Activity Feed"
                     >
@@ -365,7 +362,7 @@ export default function NotesPage() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowWorkspaces(true)}
+                        onClick={() => modals.openModal('workspaces')}
                         aria-label="Workspaces"
                         title="Workspaces"
                     >
@@ -376,7 +373,7 @@ export default function NotesPage() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowKeyboardShortcuts(true)}
+                        onClick={() => modals.openModal('keyboardShortcuts')}
                         aria-label="Keyboard shortcuts"
                         title="Keyboard shortcuts (Ctrl+?)"
                     >
@@ -404,7 +401,7 @@ export default function NotesPage() {
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setShowFolders(!showFolders)}
+                            onClick={toggleFolders}
                             className="w-full justify-start"
                         >
                             <FolderIcon className="h-4 w-4 mr-2" />
@@ -417,8 +414,8 @@ export default function NotesPage() {
                         <div className="p-2 border-b max-h-48 overflow-y-auto">
                             <FolderTree
                                 selectedFolderId={selectedFolderId}
-                                onSelectFolder={setSelectedFolderId}
-                                onError={setErrorMessage}
+                                onSelectFolder={selectFolder}
+                                onError={setError}
                             />
                         </div>
                     )}
@@ -428,7 +425,7 @@ export default function NotesPage() {
                         <NoteList
                             notes={showArchived ? archivedNotes : notes}
                             selectedNote={selectedNote}
-                            onSelectNote={setSelectedNote}
+                            onSelectNote={selectNote}
                             onCreateNote={handleCreateNote}
                             onDeleteNote={handleDeleteNote}
                             onTogglePin={handleTogglePin}
@@ -454,13 +451,13 @@ export default function NotesPage() {
                         <div className="border-b p-2 flex items-center gap-2">
                             <ColorLabelPicker
                                 noteId={selectedNote.id}
-                                onError={setErrorMessage}
+                                onError={setError}
                             />
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                    setShowVersionHistory(true);
+                                    modals.openModal('versionHistory');
                                     analyticsService.trackVersionHistoryViewed();
                                 }}
                                 title="Version History (Ctrl+H)"
@@ -471,7 +468,7 @@ export default function NotesPage() {
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setShowComments(!showComments)}
+                                onClick={() => modals.isOpen('comments') ? modals.closeModal() : modals.openModal('comments')}
                                 title="Comments"
                             >
                                 <MessageSquare className="h-4 w-4 mr-2" />
@@ -496,7 +493,7 @@ export default function NotesPage() {
                     <NoteEditor
                         note={selectedNote}
                         onSave={handleSaveNote}
-                        onError={setErrorMessage}
+                        onError={setError}
                     />
                 </div>
 
@@ -507,7 +504,7 @@ export default function NotesPage() {
                     {selectedNote && (
                         <NoteAttachments
                             noteId={selectedNote.id}
-                            onError={setErrorMessage}
+                            onError={setError}
                         />
                     )}
                 </div>
@@ -515,13 +512,13 @@ export default function NotesPage() {
             </div>
 
             {/* Version History Modal */}
-            {showVersionHistory && selectedNote && (
+            {modals.isOpen('versionHistory') && selectedNote && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-background rounded-lg shadow-lg w-full h-full sm:w-[90vw] sm:h-[80vh] max-w-6xl overflow-hidden">
                         <VersionHistory
                             noteId={selectedNote.id}
                             onRestore={handleRestoreVersion}
-                            onClose={() => setShowVersionHistory(false)}
+                            onClose={() => modals.closeModal()}
                         />
                     </div>
                 </div>
@@ -529,9 +526,9 @@ export default function NotesPage() {
 
             {/* Welcome Modal for First-Time Users */}
             <WelcomeModal
-                open={showWelcome}
+                open={modals.isOpen('welcome')}
                 onClose={() => {
-                    setShowWelcome(false);
+                    modals.closeModal();
                     onboardingService.completeOnboarding();
                 }}
                 onCreateSampleNotes={handleCreateSampleNotes}
@@ -539,64 +536,64 @@ export default function NotesPage() {
 
             {/* Keyboard Shortcuts Panel */}
             <KeyboardShortcutsPanel
-                isOpen={showKeyboardShortcuts}
-                onClose={() => setShowKeyboardShortcuts(false)}
+                isOpen={modals.isOpen('keyboardShortcuts')}
+                onClose={() => modals.closeModal()}
             />
 
             {/* Graph View Modal */}
-            {showGraphView && (
+            {modals.isOpen('graphView') && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-background rounded-lg shadow-lg w-full h-full sm:w-[90vw] sm:h-[80vh] max-w-6xl flex flex-col overflow-hidden">
                         <GraphView
                             notes={notes}
                             onSelectNote={(noteId) => {
                                 const note = notes.find(n => n.id === noteId);
-                                if (note) setSelectedNote(note);
-                                setShowGraphView(false);
+                                if (note) selectNote(note);
+                                modals.closeModal();
                             }}
-                            onClose={() => setShowGraphView(false)}
+                            onClose={() => modals.closeModal()}
                         />
                     </div>
                 </div>
             )}
 
             {/* Advanced Search Panel */}
-            {showAdvancedSearch && (
+            {modals.isOpen('advancedSearch') && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-background rounded-lg shadow-lg w-full sm:w-[90vw] max-w-2xl max-h-full sm:max-h-[80vh] overflow-y-auto">
                         <AdvancedSearchPanel
                             notes={notes}
                             allTags={allTags}
-                            onFiltersChange={setSearchFilters}
-                            onClose={() => setShowAdvancedSearch(false)}
+                            onFiltersChange={handleSearchFiltersChange}
+                            onClose={() => modals.closeModal()}
                         />
                     </div>
                 </div>
             )}
 
             {/* Activity Feed Panel */}
-            {showActivityFeed && (
+            {modals.isOpen('activityFeed') && (
                 <ActivityFeed
-                    onClose={() => setShowActivityFeed(false)}
+                    onClose={() => modals.closeModal()}
                     onSelectNote={(noteId) => {
                         const note = notes.find(n => n.id === noteId);
-                        if (note) setSelectedNote(note);
-                        setShowActivityFeed(false);
+                        if (note) selectNote(note);
+                        modals.closeModal();
                     }}
                 />
             )}
 
             {/* Comments Panel */}
-            {showComments && selectedNote && (
+            {modals.isOpen('comments') && selectedNote && (
                 <CommentThread
                     noteId={selectedNote.id}
-                    onClose={() => setShowComments(false)}
+                    onClose={() => modals.closeModal()}
                 />
             )}
 
             {/* Workspace Manager Modal */}
-            {showWorkspaces && (
-                <WorkspaceManager onClose={() => setShowWorkspaces(false)} />
+            {modals.isOpen('workspaces') && (
+                <WorkspaceManager onClose={() => modals.closeModal()} />
             )}
         </div>
     );
