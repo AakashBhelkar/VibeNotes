@@ -26,6 +26,7 @@ export interface CollaborationState {
     isCollaborating: boolean;
     collaborators: Collaborator[];
     error: string | null;
+    isOffline: boolean; // True when collaboration server is unavailable (expected state)
 }
 
 // Message types
@@ -46,6 +47,7 @@ export function useCollaboration(noteId: string | null) {
         isCollaborating: false,
         collaborators: [],
         error: null,
+        isOffline: false,
     });
 
     const socketRef = useRef<Socket | null>(null);
@@ -71,7 +73,7 @@ export function useCollaboration(noteId: string | null) {
         });
 
         socket.on('connect', () => {
-            setState(prev => ({ ...prev, isConnected: true, error: null }));
+            setState(prev => ({ ...prev, isConnected: true, error: null, isOffline: false }));
         });
 
         socket.on('disconnect', () => {
@@ -83,8 +85,10 @@ export function useCollaboration(noteId: string | null) {
             }));
         });
 
-        socket.on('connect_error', (error) => {
-            setState(prev => ({ ...prev, error: error.message }));
+        socket.on('connect_error', () => {
+            // Don't treat connection failure as an error - collaboration is optional
+            // Set isOffline to indicate collaboration server is unavailable
+            setState(prev => ({ ...prev, isOffline: true, error: null }));
         });
 
         socketRef.current = socket;
@@ -105,6 +109,7 @@ export function useCollaboration(noteId: string | null) {
             isCollaborating: false,
             collaborators: [],
             error: null,
+            isOffline: false,
         });
     }, []);
 

@@ -48,6 +48,7 @@ interface CollaborationStatusProps {
     isCollaborating: boolean;
     collaborators: Collaborator[];
     error: string | null;
+    isOffline?: boolean;
 }
 
 /**
@@ -58,12 +59,24 @@ export function CollaborationStatus({
     isCollaborating,
     collaborators,
     error,
+    isOffline = false,
 }: CollaborationStatusProps) {
+    // Show error only for actual errors (not connection unavailable)
     if (error) {
         return (
             <div className="flex items-center gap-2 text-xs text-destructive">
                 <div className="w-2 h-2 rounded-full bg-destructive" />
-                <span>Connection error</span>
+                <span>Error: {error}</span>
+            </div>
+        );
+    }
+
+    // Show offline mode when collaboration server is unavailable
+    if (isOffline) {
+        return (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="w-2 h-2 rounded-full bg-muted" />
+                <span>Offline mode</span>
             </div>
         );
     }

@@ -595,6 +595,7 @@ export default function NotesPage() {
                                 isCollaborating={collaboration.isCollaborating}
                                 collaborators={collaboration.collaborators}
                                 error={collaboration.error}
+                                isOffline={collaboration.isOffline}
                             />
                         </Toolbar>
                     )}
