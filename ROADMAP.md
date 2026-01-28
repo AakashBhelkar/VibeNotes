@@ -77,9 +77,11 @@ VibeNotes is an offline-first collaborative note-taking application with:
 | Project Structure | Completed | React Native 0.73+ with TypeScript |
 | API Service | Completed | Axios client with auth interceptors |
 | State Management | Completed | Zustand store for notes |
-| Core Note CRUD | Planned | Create, read, update, delete notes |
-| Offline Storage | Planned | SQLite for local persistence |
-| Server Sync | Planned | Full sync with existing API |
+| Core Note CRUD | Completed | Home, Note, Login, Settings screens with full CRUD |
+| Offline Storage | Completed | SQLite database service for local persistence |
+| Server Sync | Completed | Full sync service with conflict resolution |
+| React Navigation | Completed | Native stack navigator with auth flow |
+| Custom Hooks | Completed | useNotes, useSync, useAuth for state management |
 | Push Notifications | Planned | FCM/APNs integration |
 | Biometric Auth | Planned | Fingerprint/Face ID support |
 
