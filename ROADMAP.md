@@ -2,7 +2,7 @@
 
 This document outlines the planned features and improvements for VibeNotes.
 
-## Current Version: 1.3.0
+## Current Version: 1.3.1
 
 VibeNotes is an offline-first collaborative note-taking application with:
 - Full offline support with automatic sync
@@ -13,6 +13,21 @@ VibeNotes is an offline-first collaborative note-taking application with:
 - Real-time collaboration (WebSocket infrastructure)
 - Version history
 - Advanced search capabilities
+
+---
+
+## v1.3.1 - UI/UX Improvements (January 2026)
+*Focus: User interface polish and bug fixes*
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Auto-save Fix | Completed | Fixed refresh loop in NoteEditor that caused content flickering |
+| State Management | Completed | Consolidated 14 useState calls into 2 custom hooks (useModalManager, useNotesPageState) |
+| MUI Migration | Completed | Implemented AppBar, Drawer, and Toolbar components for professional layout |
+| Template Redesign | Completed | Added tabs, preview panel, icon picker, edit functionality, and delete confirmation |
+| Collaboration Status | Completed | Graceful "Offline mode" display instead of connection errors |
+| Branding | Completed | New favicon and logo SVG assets with indigo gradient theme |
+| SEO Meta Tags | Completed | Added Open Graph, Twitter Card, and theme-color meta tags |
 
 ---
 
