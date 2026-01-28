@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { ExportMenu } from '@/components/ExportMenu';
@@ -21,6 +21,8 @@ import {
     Users,
     Search,
     FolderTree as FolderIcon,
+    Menu,
+    ChevronLeft,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
@@ -45,12 +47,31 @@ import { useCollaboration } from '@/hooks/useCollaboration';
 import { useModalManager } from '@/hooks/useModalManager';
 import { useNotesPageState } from '@/hooks/useNotesPageState';
 
+// MUI imports
+import {
+    AppBar,
+    Toolbar,
+    IconButton,
+    Typography,
+    Drawer,
+    Box,
+    Divider,
+    Chip,
+    Tooltip,
+    useMediaQuery,
+    useTheme,
+} from '@mui/material';
+
+const DRAWER_WIDTH = 320;
+
 /**
  * Main Notes page with list and editor
  * Provides full note management interface with offline support
  */
 export default function NotesPage() {
     const navigate = useNavigate();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     // Consolidated state management
     const { state: pageState, actions: pageActions } = useNotesPageState();
@@ -59,6 +80,9 @@ export default function NotesPage() {
 
     // Modal management
     const modals = useModalManager();
+
+    // Drawer state for mobile
+    const [drawerOpen, setDrawerOpen] = useState(!isMobile);
 
     const { notes, createNote, updateNote, deleteNote, searchNotes, refresh, fetchArchivedNotes, archivedNotes } = useNotes();
     const collaboration = useCollaboration(selectedNote?.id || null);
@@ -281,174 +305,267 @@ export default function NotesPage() {
     };
 
 
-    return (
-        <div className="h-screen flex flex-col">
-            {/* Top Bar - Hidden in distraction-free mode */}
-            {!distractionFreeMode && (
-            <div className="h-14 border-b flex items-center justify-between px-4 bg-card">
-                <h1 className="text-xl font-bold">VibeNotes</h1>
+    // Sidebar content (reusable for both drawer modes)
+    const sidebarContent = (
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Folder Tree Toggle */}
+            <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleFolders}
+                    className="w-full justify-start"
+                >
+                    <FolderIcon className="h-4 w-4 mr-2" />
+                    {showFolders ? 'Hide Folders' : 'Show Folders'}
+                </Button>
+            </Box>
 
-                <div className="flex items-center gap-2">
-                    {/* Error Message */}
-                    {errorMessage && (
-                        <span className="text-sm text-destructive">{errorMessage}</span>
-                    )}
-
-                    {/* Online/Offline Indicator */}
-                    <div className="flex items-center gap-2 text-sm">
-                        {isOnline ? (
-                            <Cloud className="h-4 w-4 text-green-500" />
-                        ) : (
-                            <CloudOff className="h-4 w-4 text-gray-500" />
-                        )}
-                        <span className="text-muted-foreground">
-                            {isOnline ? 'Online' : 'Offline'}
-                        </span>
-                    </div>
-
-                    {/* Sync Button */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleSync}
-                        disabled={!isOnline || isSyncing}
-                        aria-label="Sync notes"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                    </Button>
-
-                    {/* Export Menu */}
-                    <ExportMenu
-                        note={selectedNote}
-                        notes={notes}
-                        onImport={handleImport}
+            {/* Folder Tree */}
+            {showFolders && (
+                <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider', maxHeight: 192, overflowY: 'auto' }}>
+                    <FolderTree
+                        selectedFolderId={selectedFolderId}
+                        onSelectFolder={selectFolder}
                         onError={setError}
                     />
-
-                    {/* Graph View */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => modals.openModal('graphView')}
-                        aria-label="Graph view"
-                        title="Graph View"
-                    >
-                        <Network className="h-4 w-4" />
-                    </Button>
-
-                    {/* Advanced Search */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => modals.openModal('advancedSearch')}
-                        aria-label="Advanced search"
-                        title="Advanced Search"
-                    >
-                        <Search className="h-4 w-4" />
-                    </Button>
-
-                    {/* Activity Feed */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => modals.openModal('activityFeed')}
-                        aria-label="Activity feed"
-                        title="Activity Feed"
-                    >
-                        <Activity className="h-4 w-4" />
-                    </Button>
-
-                    {/* Workspaces */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => modals.openModal('workspaces')}
-                        aria-label="Workspaces"
-                        title="Workspaces"
-                    >
-                        <Users className="h-4 w-4" />
-                    </Button>
-
-                    {/* Keyboard Shortcuts */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => modals.openModal('keyboardShortcuts')}
-                        aria-label="Keyboard shortcuts"
-                        title="Keyboard shortcuts (Ctrl+?)"
-                    >
-                        <Keyboard className="h-4 w-4" />
-                    </Button>
-
-                    {/* Theme Toggle */}
-                    <ModeToggle />
-
-                    {/* Logout */}
-                    <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Logout">
-                        <LogOut className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
+                </Box>
             )}
 
-            {/* Main Content */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Note List Sidebar - Hidden in distraction-free mode */}
-                {!distractionFreeMode && (
-                <div className="w-full md:w-80 md:flex-shrink-0 flex flex-col border-r">
-                    {/* Folder Tree Toggle */}
-                    <div className="p-2 border-b flex items-center justify-between">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={toggleFolders}
-                            className="w-full justify-start"
-                        >
-                            <FolderIcon className="h-4 w-4 mr-2" />
-                            {showFolders ? 'Hide Folders' : 'Show Folders'}
-                        </Button>
-                    </div>
-
-                    {/* Folder Tree */}
-                    {showFolders && (
-                        <div className="p-2 border-b max-h-48 overflow-y-auto">
-                            <FolderTree
-                                selectedFolderId={selectedFolderId}
-                                onSelectFolder={selectFolder}
-                                onError={setError}
-                            />
-                        </div>
-                    )}
-
-                    {/* Note List */}
-                    <div className="flex-1 overflow-hidden">
-                        <NoteList
-                            notes={showArchived ? archivedNotes : notes}
-                            selectedNote={selectedNote}
-                            onSelectNote={selectNote}
-                            onCreateNote={handleCreateNote}
-                            onDeleteNote={handleDeleteNote}
-                            onTogglePin={handleTogglePin}
-                            onToggleArchive={handleToggleArchive}
-                            onSearch={searchNotes}
-                            showArchived={showArchived}
-                            onToggleShowArchived={handleToggleShowArchived}
-                            templateSelector={
-                                <TemplateSelector
-                                    onSelectTemplate={handleSelectTemplate}
-                                    onCreateDailyNote={handleCreateDailyNote}
-                                />
-                            }
+            {/* Note List */}
+            <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                <NoteList
+                    notes={showArchived ? archivedNotes : notes}
+                    selectedNote={selectedNote}
+                    onSelectNote={(note) => {
+                        selectNote(note);
+                        if (isMobile) setDrawerOpen(false);
+                    }}
+                    onCreateNote={handleCreateNote}
+                    onDeleteNote={handleDeleteNote}
+                    onTogglePin={handleTogglePin}
+                    onToggleArchive={handleToggleArchive}
+                    onSearch={searchNotes}
+                    showArchived={showArchived}
+                    onToggleShowArchived={handleToggleShowArchived}
+                    templateSelector={
+                        <TemplateSelector
+                            onSelectTemplate={handleSelectTemplate}
+                            onCreateDailyNote={handleCreateDailyNote}
                         />
-                    </div>
-                </div>
+                    }
+                />
+            </Box>
+        </Box>
+    );
+
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+            {/* MUI AppBar - Hidden in distraction-free mode */}
+            {!distractionFreeMode && (
+                <AppBar
+                    position="static"
+                    color="default"
+                    elevation={0}
+                    sx={{
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                    }}
+                >
+                    <Toolbar variant="dense" sx={{ gap: 1 }}>
+                        {/* Mobile menu button */}
+                        {isMobile && (
+                            <IconButton
+                                edge="start"
+                                color="inherit"
+                                aria-label="menu"
+                                onClick={() => setDrawerOpen(!drawerOpen)}
+                                sx={{ mr: 1 }}
+                            >
+                                <Menu className="h-5 w-5" />
+                            </IconButton>
+                        )}
+
+                        {/* Logo / Title */}
+                        <Typography
+                            variant="h6"
+                            component="h1"
+                            sx={{
+                                fontWeight: 700,
+                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                backgroundClip: 'text',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                mr: 2,
+                            }}
+                        >
+                            VibeNotes
+                        </Typography>
+
+                        {/* Status Chip */}
+                        <Chip
+                            icon={isOnline ? <Cloud className="h-3 w-3" /> : <CloudOff className="h-3 w-3" />}
+                            label={isOnline ? 'Online' : 'Offline'}
+                            size="small"
+                            color={isOnline ? 'success' : 'default'}
+                            variant="outlined"
+                            sx={{ mr: 1 }}
+                        />
+
+                        {/* Error Message */}
+                        {errorMessage && (
+                            <Chip
+                                label={errorMessage}
+                                size="small"
+                                color="error"
+                                onDelete={() => setError(null)}
+                                sx={{ mr: 1 }}
+                            />
+                        )}
+
+                        {/* Spacer */}
+                        <Box sx={{ flexGrow: 1 }} />
+
+                        {/* Action Group 1: Sync */}
+                        <Tooltip title="Sync notes">
+                            <span>
+                                <IconButton
+                                    onClick={handleSync}
+                                    disabled={!isOnline || isSyncing}
+                                    size="small"
+                                >
+                                    <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+
+                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+                        {/* Action Group 2: Content */}
+                        <ExportMenu
+                            note={selectedNote}
+                            notes={notes}
+                            onImport={handleImport}
+                            onError={setError}
+                        />
+
+                        <Tooltip title="Graph View">
+                            <IconButton
+                                onClick={() => modals.openModal('graphView')}
+                                size="small"
+                            >
+                                <Network className="h-4 w-4" />
+                            </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Advanced Search">
+                            <IconButton
+                                onClick={() => modals.openModal('advancedSearch')}
+                                size="small"
+                            >
+                                <Search className="h-4 w-4" />
+                            </IconButton>
+                        </Tooltip>
+
+                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+                        {/* Action Group 3: Collaboration */}
+                        <Tooltip title="Activity Feed">
+                            <IconButton
+                                onClick={() => modals.openModal('activityFeed')}
+                                size="small"
+                            >
+                                <Activity className="h-4 w-4" />
+                            </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Workspaces">
+                            <IconButton
+                                onClick={() => modals.openModal('workspaces')}
+                                size="small"
+                            >
+                                <Users className="h-4 w-4" />
+                            </IconButton>
+                        </Tooltip>
+
+                        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+                        {/* Action Group 4: Settings */}
+                        <Tooltip title="Keyboard Shortcuts (Ctrl+?)">
+                            <IconButton
+                                onClick={() => modals.openModal('keyboardShortcuts')}
+                                size="small"
+                            >
+                                <Keyboard className="h-4 w-4" />
+                            </IconButton>
+                        </Tooltip>
+
+                        <ModeToggle />
+
+                        <Tooltip title="Logout">
+                            <IconButton onClick={handleLogout} size="small">
+                                <LogOut className="h-4 w-4" />
+                            </IconButton>
+                        </Tooltip>
+                    </Toolbar>
+                </AppBar>
+            )}
+
+            {/* Main Content Area */}
+            <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                {/* Drawer / Sidebar - Hidden in distraction-free mode */}
+                {!distractionFreeMode && (
+                    <Drawer
+                        variant={isMobile ? 'temporary' : 'persistent'}
+                        open={isMobile ? drawerOpen : true}
+                        onClose={() => setDrawerOpen(false)}
+                        sx={{
+                            width: DRAWER_WIDTH,
+                            flexShrink: 0,
+                            '& .MuiDrawer-paper': {
+                                width: DRAWER_WIDTH,
+                                boxSizing: 'border-box',
+                                position: isMobile ? 'fixed' : 'relative',
+                                height: isMobile ? '100%' : 'auto',
+                            },
+                        }}
+                    >
+                        {/* Close button for mobile */}
+                        {isMobile && (
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
+                                <IconButton onClick={() => setDrawerOpen(false)} size="small">
+                                    <ChevronLeft className="h-5 w-5" />
+                                </IconButton>
+                            </Box>
+                        )}
+                        {sidebarContent}
+                    </Drawer>
                 )}
 
                 {/* Note Editor */}
-                <div className={`flex-1 flex flex-col ${distractionFreeMode ? '' : 'border-r'}`}>
+                <Box
+                    component="main"
+                    sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
+                        borderRight: distractionFreeMode ? 'none' : 1,
+                        borderColor: 'divider',
+                    }}
+                >
                     {/* Editor toolbar - Hidden in distraction-free mode */}
                     {!distractionFreeMode && selectedNote && (
-                        <div className="border-b p-2 flex items-center gap-2">
+                        <Toolbar
+                            variant="dense"
+                            sx={{
+                                borderBottom: 1,
+                                borderColor: 'divider',
+                                gap: 1,
+                                minHeight: 48,
+                            }}
+                        >
                             <ColorLabelPicker
                                 noteId={selectedNote.id}
                                 onError={setError}
@@ -460,7 +577,6 @@ export default function NotesPage() {
                                     modals.openModal('versionHistory');
                                     analyticsService.trackVersionHistoryViewed();
                                 }}
-                                title="Version History (Ctrl+H)"
                             >
                                 <Clock className="h-4 w-4 mr-2" />
                                 History
@@ -469,47 +585,66 @@ export default function NotesPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => modals.isOpen('comments') ? modals.closeModal() : modals.openModal('comments')}
-                                title="Comments"
                             >
                                 <MessageSquare className="h-4 w-4 mr-2" />
                                 Comments
                             </Button>
-                            <div className="ml-auto">
-                                <CollaborationStatus
-                                    isConnected={collaboration.isConnected}
-                                    isCollaborating={collaboration.isCollaborating}
-                                    collaborators={collaboration.collaborators}
-                                    error={collaboration.error}
-                                />
-                            </div>
-                        </div>
+                            <Box sx={{ flexGrow: 1 }} />
+                            <CollaborationStatus
+                                isConnected={collaboration.isConnected}
+                                isCollaborating={collaboration.isCollaborating}
+                                collaborators={collaboration.collaborators}
+                                error={collaboration.error}
+                            />
+                        </Toolbar>
                     )}
                     {/* Distraction-free mode exit hint */}
                     {distractionFreeMode && (
-                        <div className="absolute top-2 right-2 text-xs text-muted-foreground opacity-50 hover:opacity-100 transition-opacity z-10">
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                                fontSize: '0.75rem',
+                                color: 'text.secondary',
+                                opacity: 0.5,
+                                transition: 'opacity 0.2s',
+                                zIndex: 10,
+                                '&:hover': { opacity: 1 },
+                            }}
+                        >
                             Press Esc to exit
-                        </div>
+                        </Box>
                     )}
                     <NoteEditor
                         note={selectedNote}
                         onSave={handleSaveNote}
                         onError={setError}
                     />
-                </div>
+                </Box>
 
                 {/* Right Sidebar - Attachments - Hidden in distraction-free mode and on mobile */}
                 {!distractionFreeMode && (
-                <div className="hidden lg:block w-80 flex-shrink-0 overflow-y-auto p-4 bg-muted/30">
-                    <StorageQuotaDisplay />
-                    {selectedNote && (
-                        <NoteAttachments
-                            noteId={selectedNote.id}
-                            onError={setError}
-                        />
-                    )}
-                </div>
+                    <Box
+                        sx={{
+                            display: { xs: 'none', lg: 'block' },
+                            width: DRAWER_WIDTH,
+                            flexShrink: 0,
+                            overflowY: 'auto',
+                            p: 2,
+                            bgcolor: 'action.hover',
+                        }}
+                    >
+                        <StorageQuotaDisplay />
+                        {selectedNote && (
+                            <NoteAttachments
+                                noteId={selectedNote.id}
+                                onError={setError}
+                            />
+                        )}
+                    </Box>
                 )}
-            </div>
+            </Box>
 
             {/* Version History Modal */}
             {modals.isOpen('versionHistory') && selectedNote && (
@@ -595,6 +730,6 @@ export default function NotesPage() {
             {modals.isOpen('workspaces') && (
                 <WorkspaceManager onClose={() => modals.closeModal()} />
             )}
-        </div>
+        </Box>
     );
 }
