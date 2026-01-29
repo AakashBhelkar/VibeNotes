@@ -47,3 +47,7 @@ server/uploads/
 
 # Claude Code
 .claude/
+
+# Expo
+mobile/.expo/
+.expo/
